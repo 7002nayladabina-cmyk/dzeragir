@@ -75,7 +75,8 @@ canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-
 <label>Буквы по порядку (можно поправить)<input id="allch" type="text" style="width:100%"></label>
 <label>Разрыв между буквами<output id="o_gap">0.15</output><input type="range" id="gap" min="0.04" max="0.5" step="0.01" value="0.15"></label>
 <label>Фото листа<input type="file" id="allf" accept="image/*"></label>
-<p class="hint" id="allmsg"></p><div id="shtools" style="display:none"><div class="row"><button type="button" id="shdel" class="p">Убрать пятно</button><button type="button" id="shmerge">Склеить с соседним</button><button type="button" id="shany">Применить по порядку</button></div></div><canvas id="sheetprev" style="display:none"></canvas></div>
+<p class="hint" id="allmsg"></p><div class="row"><button type="button" id="gclr">Удалить все буквы</button></div>
+<div id="shtools" style="display:none"><div class="row"><button type="button" id="shdel" class="p">Убрать пятно</button><button type="button" id="shmerge">Склеить с соседним</button><button type="button" id="shany">Применить по порядку</button></div></div><canvas id="sheetprev" style="display:none"></canvas></div>
 <details class="card"><summary>Поправить отдельные буквы (загружено: <span id="cnt">0</span>)</summary>
 <p class="hint">Загрузите по картинке на каждую букву (ручка на белом фоне). На всех картинках низ строки должен быть на одном уровне, хвостики (у, р, д) уходят ниже. Лишнее слева и справа обрежется само. Если буквы нет — подставится рукописный шрифт.</p>
 <label>Сразу много файлов (имя файла = буква: <b>а.png</b>, заглавная — <b>а_up.png</b>; знаки: dot, comma, excl, quest, dash, colon, semi)
@@ -90,7 +91,7 @@ canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-
 <p class="hint">Поставьте низ буквы на красную линию, нажмите «Снять». Следующая буква откроется сама.</p></div>
 <input type="file" id="cam" accept="image/*" capture="environment" hidden>
 <div class="padw"><i class="gl" style="top:15%"></i><i class="gl" style="top:35%"></i><i class="gl b" style="top:80%"></i><canvas id="pad" width="640" height="400"></canvas></div>
-<div class="row"><button id="pclr">Очистить</button><button class="p" id="psave">Сохранить букву</button><button id="pfile">Из файла</button></div>
+<div class="row"><button type="button" id="gdel">Удалить эту букву</button><button id="pclr">Очистить</button><button class="p" id="psave">Сохранить букву</button><button id="pfile">Из файла</button></div>
 <p class="hint">Тело строчной буквы — между синей средней и красной линиями, заглавные и высокие буквы — до верхней, хвостики (у, р, д) — ниже красной. После сохранения откроется следующая буква.</p></div>
 <input type="file" id="one" accept="image/*" hidden>
 </details></section>
@@ -416,6 +417,12 @@ if(mv>3.5*tw)continue;const key=(let_[i]+let_[i+1]).toLowerCase(),v=PR.get(key)|
 if(mv>0){let sy=0,cn=0;for(let y=b0;y<=b1;y++)if(mask[y*w+X0+mx]){sy+=y;cn++}if(cn){v.jn++;v.sy+=Math.max(0,(bl-sy/cn)/Hu)}}PR.set(key,v)}}}
 return PR}
 jmList();
+
+let gT=0;
+$('gclr').onclick=()=>{const b=$('gclr');if(!gT){b.textContent='Точно удалить все? Нажмите ещё раз';gT=setTimeout(()=>{gT=0;b.textContent='Удалить все буквы'},4000);return}
+clearTimeout(gT);gT=0;b.textContent='Удалить все буквы';G.clear();SH=null;lastSheet=null;$('sheetprev').style.display='none';$('shtools').style.display='none';
+try{localStorage.removeItem('hw1')}catch(e){}$('allmsg').textContent='Все буквы удалены.';tiles();sched()};
+$('gdel').onclick=()=>{if(G.has(pick)){G.delete(pick);tiles();sched();$('cmsg').style.display='block';$('cmsg').querySelector('span').textContent='Буква «'+pick+'» удалена.'}};
 let ready=false;
 function persist(){if(!ready)return;try{const o={};for(const[k,g]of G){g.u=g.u||g.c.toDataURL();o[k]={u:g.u,iy:g.iy,ey:g.ey,w:g.w,h:g.h}}localStorage.setItem('hw1',JSON.stringify(o))}catch(e){}}
 function restore(){let o={};try{o=JSON.parse(localStorage.getItem('hw1')||'{}')}catch(e){}let n=Object.keys(o).length;if(!n){ready=true;return}
