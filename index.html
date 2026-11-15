@@ -45,7 +45,7 @@ canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-
 <div class="tabs"><button class="tab on" data-t="t0">Текст</button><button class="tab" data-t="t1">Бумага</button><button class="tab" data-t="t2">Почерк</button><button class="tab" data-t="t3">Соединения</button><button class="tab" data-t="t4">Чернила</button></div>
 <section class="pn" id="t0"><div class="card"><h1>Мой почерк на бумаге</h1>
 <textarea id="txt">Привет! Это текст, написанный моим почерком.</textarea></div>
-<div class="card"><label style="margin:0;font-weight:600">Расстояние между буквами<output id="o_ls"></output><input type="range" id="ls" min="-20" max="20" step="0.5" value="0"></label>
+<div class="card"><label style="margin:0;font-weight:600">Расстояние между буквами<output id="o_ls"></output><input type="range" id="ls" min="-20" max="20" step="0.5" value="3"></label>
 <label style="font-weight:600">Расстояние между словами<output id="o_ws"></output><input type="range" id="ws" min="-30" max="40" step="1" value="0"></label></div>
 <div class="card"><div id="sl1"></div></div>
 
@@ -70,11 +70,12 @@ canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-
 </div></section>
 <section class="pn" id="t2" hidden><div class="card"><h1>Все буквы одной фотографией</h1>
 <p class="hint">Напишите буквы на листе по порядку, с заметными промежутками, рядами. Снимайте лист ровно сверху, чтобы бумага занимала весь кадр, без теней и без краёв стола.</p>
-<label>Что написано на листе<select id="pre"><option value="абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ">Русские строчные и заглавные (66)</option><option value="абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ0123456789.,!?-:;()">Всё: русские, цифры и знаки (83)</option><option value="абвгдеёжзийклмнопрстуфхцчшщъыьэюя">Русские строчные (33)</option><option value="АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ">Русские заглавные (33)</option><option value="abcdefghijklmnopqrstuvwxyz">Латинские строчные (26)</option><option value="ABCDEFGHIJKLMNOPQRSTUVWXYZ">Латинские заглавные (26)</option><option value="0123456789">Цифры (10)</option><option value=".,!?-:;()">Знаки . , ! ? - : ; ( )</option></select></label>
+<label>Что написано на листе (порядок: цифры, заглавные, строчные)<select id="pre"><option value="ru">Русский: цифры, заглавные, строчные (76)</option><option value="en">English: цифры, заглавные, строчные (62)</option><option value="both">Русский и English вместе (128)</option><option value="ruL">Только русские строчные (33)</option><option value="ruU">Только русские заглавные (33)</option><option value="enL">Only English lowercase (26)</option><option value="enU">Only English uppercase (26)</option><option value="dig">Только цифры (10)</option></select></label>
+<label><input type="checkbox" id="ppun" checked> Знаки в конце листа: . , ! ? - : ; ( )</label>
 <label>Буквы по порядку (можно поправить)<input id="allch" type="text" style="width:100%"></label>
 <label>Разрыв между буквами<output id="o_gap">0.15</output><input type="range" id="gap" min="0.04" max="0.5" step="0.01" value="0.15"></label>
 <label>Фото листа<input type="file" id="allf" accept="image/*"></label>
-<p class="hint" id="allmsg"></p></div>
+<p class="hint" id="allmsg"></p><canvas id="sheetprev" style="display:none"></canvas></div>
 <details class="card"><summary>Поправить отдельные буквы (загружено: <span id="cnt">0</span>)</summary>
 <p class="hint">Загрузите по картинке на каждую букву (ручка на белом фоне). На всех картинках низ строки должен быть на одном уровне, хвостики (у, р, д) уходят ниже. Лишнее слева и справа обрежется само. Если буквы нет — подставится рукописный шрифт.</p>
 <label>Сразу много файлов (имя файла = буква: <b>а.png</b>, заглавная — <b>а_up.png</b>; знаки: dot, comma, excl, quest, dash, colon, semi)
@@ -129,7 +130,7 @@ const NAMES={dot:'.',comma:',',excl:'!',quest:'?',dash:'-',colon:':',semi:';'};
 const mk=(id,l,a,b,s,v)=>`<label>${l}<output id="o_${id}">${v}</output><input type="range" id="${id}" min="${a}" max="${b}" step="${s}" value="${v}"></label>`;
 $('sl1').innerHTML=[['size','Размер букв',20,80,1,38],['jit','Неровность почерка',0,10,1,3],['vo','Сдвиг букв по вертикали',-20,20,1,0]].map(a=>mk(...a)).join('');$('sl1b').innerHTML=[['pitch','Межстрочный интервал',20,90,1,38],['ml','Левое поле',20,200,1,70],['mt','Верхнее поле',30,300,1,80]].map(a=>mk(...a)).join('');
 $('sl2').innerHTML=[['hop','Прозрачность тени',0.05,0.8,0.05,0.35],['hdx','Сдвиг по горизонтали',-250,250,1,0],['hdy','Сдвиг по вертикали',-250,250,1,0]].map(a=>mk(...a)).join('');
-$('sl3').innerHTML=mk('jw','Толщина соединения',1,8,0.5,2.5);
+$('sl3').innerHTML=mk('jw','Толщина чёрточки',1,8,0.5,3)+mk('jl','Длина чёрточки',0,20,1,6);
 document.querySelectorAll('input[type=range]').forEach(r=>{const o=$('o_'+r.id);o.textContent=r.value})
 
 const PEN={lo:25,sp:140};
@@ -138,8 +139,8 @@ const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0);const 
 for(let i=0;i<w*h;i++){const p=i*4,lum=a[p]*.3+a[p+1]*.59+a[p+2]*.11,al=Math.min(1,Math.max(0,(255-lum-PEN.lo)/PEN.sp))*a[p+3]/255;
 a[p]=a[p+1]=a[p+2]=0;a[p+3]=al*255;if(al>.3){const px=i%w;if(px<x0)x0=px;if(px>x1)x1=px}}
 if(x1<x0)return null;x.putImageData(d,0,0);const tw=x1-x0+1,t=document.createElement('canvas');t.width=tw;t.height=h;
-t.getContext('2d').drawImage(c,x0,0,tw,h,0,0,tw,h);const edge=xs=>{let s=0,n=0;for(const xx of xs)for(let yy=0;yy<h;yy++){const al=a[(yy*w+xx)*4+3];if(al>80){s+=yy*al;n+=al}}return n?s/n:h*.6};
-const iy=edge([x0,x0+1,x0+2].filter(v=>v<=x1)),ey=edge([x1,x1-1,x1-2].filter(v=>v>=x0));
+t.getContext('2d').drawImage(c,x0,0,tw,h,0,0,tw,h);const bl8=h*.8,edge=xs=>{let m=-1;for(const xx of xs)for(let yy=h-1;yy>=0;yy--)if(a[(yy*w+xx)*4+3]>80){if(yy>m)m=yy;break}return m<0?bl8*.85:Math.min(bl8,m)},kk=Math.max(2,Math.round(tw*.08));
+const iy=edge(Array.from({length:kk},(_,q)=>x0+q).filter(v=>v<=x1)),ey=edge(Array.from({length:kk},(_,q)=>x1-q).filter(v=>v>=x0));
 return{c:t,w:tw,h,k:null,cc:null,u:null,iy,ey}}
 function colored(g,col){if(g.k===col)return g.cc;const t=document.createElement('canvas');t.width=g.w;t.height=g.h;const x=t.getContext('2d');
 x.drawImage(g.c,0,0);x.globalCompositeOperation='source-in';x.fillStyle=col;x.fillRect(0,0,g.w,g.h);g.k=col;g.cc=t;return t}
@@ -165,7 +166,7 @@ const arr=[...w].map(ch=>{let g=G.get(ch),k=1;if(!g&&ch!==ch.toLowerCase()){g=G.
 const h=size*k;return{ch,g,h,w:g?g.w*h/g.h:mc.measureText(ch).width,fs:size}});
 const tw=arr.reduce((a,o)=>a+Math.max(.5,o.w+ls),0);
 if(x+tw>W-mr&&x>ml)nl();
-for(let k=0;k<arr.length;k++){const o=arr[k],n=arr[k+1];const hj=((++pn*2654435761)>>>0)/4294967296;o.nx=(n&&o.g&&n.g&&JN&&hj<jf&&!NJ.has(o.ch.toLowerCase()))?n:null;o.x=x;o.y=y;o.rot=(rnd()-.5)*jit*.012;o.dy=(rnd()-.5)*jit*.5;o.s=1+(rnd()-.5)*jit*.012;pages[pages.length-1].push(o);x+=Math.max(.5,o.w+ls)}
+for(let k=0;k<arr.length;k++){const o=arr[k],n=arr[k+1];const hj=((++pn*2654435761)>>>0)/4294967296;o.nx=(n&&JN&&hj<jf&&/\p{L}/u.test(o.ch)&&/\p{L}/u.test(n.ch)&&!NJ.has(o.ch.toLowerCase()))?n:null;o.x=x;o.y=y;o.rot=(rnd()-.5)*jit*.012;o.dy=(rnd()-.5)*jit*.5;o.s=1+(rnd()-.5)*jit*.012;pages[pages.length-1].push(o);x+=Math.max(.5,o.w+ls)}
 x+=Math.max(2,size*.35+ws)}
 nl()}
 if(pages.length>1&&!pages[pages.length-1].length)pages.pop();
@@ -189,9 +190,9 @@ ctx.globalCompositeOperation='multiply';ctx.globalAlpha=+$('jop').value/100;
 for(const o of it){if(o.ch===' ')continue;ctx.save();ctx.translate(o.x+o.w/2,o.y+o.dy);ctx.rotate(o.rot);ctx.scale(o.s,o.s);
 if(o.g)ctx.drawImage(colored(o.g,ink),-o.w/2,-o.h*.8+vo,o.w,o.h);
 else{ctx.fillStyle=ink;ctx.font=o.fs+'px Caveat,cursive';ctx.fillText(o.ch,-o.w/2,vo)}ctx.restore()}
-if($('join').checked){ctx.strokeStyle=ink;ctx.lineWidth=+$('jw').value;ctx.lineCap='round';for(const o of it){const n=o.nx;if(!n)continue;
-const sx=o.x+o.w,nx=n.x,sy=o.y+o.dy-o.h*.8+vo+o.g.ey*o.h/o.g.h,ty=n.y+n.dy-n.h*.8+vo+n.g.iy*n.h/n.g.h;
-ctx.beginPath();ctx.moveTo(sx-1,sy);ctx.bezierCurveTo((sx+nx)/2,sy,(sx+nx)/2,ty,nx+1,ty);ctx.stroke()}}
+if($('join').checked){ctx.strokeStyle=ink;ctx.lineWidth=+$('jw').value;ctx.lineCap='round';const ext=+$('jl').value,eyf=o=>o.g?o.y+o.dy-o.h*.8+vo+o.g.ey*o.h/o.g.h:o.y+o.dy+vo-o.fs*.2,iyf=o=>o.g?o.y+o.dy-o.h*.8+vo+o.g.iy*o.h/o.g.h:o.y+o.dy+vo-o.fs*.2;
+for(const o of it){const n=o.nx;if(!n)continue;const sx=o.x+o.w-ext*.4,nx=n.x+ext*.4,sy=eyf(o),ty=iyf(n),mx=(sx+nx)/2;
+ctx.beginPath();ctx.moveTo(sx-ext,sy);ctx.bezierCurveTo(mx,sy,mx,ty,nx+ext,ty);ctx.stroke()}}
 ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
 const hk=$('hand').value;if(hk!=='n'&&it.length){const l=it[it.length-1];hand(l.x+l.w+ +$('hdx').value,l.y+ +$('hdy').value,hk==='m')}
 }
@@ -306,11 +307,14 @@ for(let x=0;x<w;x++){if(col[x]>0){if(st<0)st=x;last=x}else if(st>=0&&x-last>gap)
 const it=[];for(const[x0,x1]of ss){let ink=0,top=1e9,bot=-1;for(let y=b0;y<=b1;y++)for(let x=x0;x<=x1;x++)if(mask[y*w+x]){ink++;if(y<top)top=y;if(y>bot)bot=y}
 if(ink>bh*bh*.006&&x1-x0>=bh*.05)it.push({x0,x1,top,bot,b0,b1})}
 if(!it.length)continue;const bots=it.map(o=>o.bot).sort((p,q)=>p-q),tops=it.map(o=>o.top).sort((p,q)=>p-q),bl=bots[bots.length>>1],tp=tops[Math.floor(tops.length*.1)];
-for(const o of it){o.bl=bl;o.tp=tp;all.push(o)}}
+for(const o of it){o.bl=bl;all.push(o)}}
+const hts=all.map(o=>Math.max(1,o.bl-o.top)).sort((p,q)=>p-q),HU=hts.length?hts[Math.min(hts.length-1,Math.floor(hts.length*.85))]:20;
+{const pc=$('sheetprev'),pk=Math.min(1,900/w);pc.width=Math.round(w*pk);pc.height=Math.round(h*pk);pc.style.display='block';const q=pc.getContext('2d');q.drawImage(sc,0,0,pc.width,pc.height);q.lineWidth=2;q.font='bold 13px system-ui';
+all.forEach((o,i)=>{const ok=all.length===chars.length;q.strokeStyle=ok?'#1a9b4a':'#e5322d';q.fillStyle=q.strokeStyle;q.strokeRect(o.x0*pk,o.top*pk,(o.x1-o.x0)*pk,(o.bot-o.top)*pk);q.fillText(ok?chars[i]:String(i+1),o.x0*pk,o.top*pk-3)})}
 if(all.length!==chars.length){msg.textContent='Нашлось букв: '+all.length+', а ожидалось '+chars.length+'. '+(all.length<chars.length?'Буквы слиплись: уменьшите «Разрыв между буквами» или пишите дальше друг от друга.':'Буквы разбились на части или есть лишние пятна: увеличьте «Разрыв между буквами» или снимите ровнее.');return}
 const nc=document.createElement('canvas');nc.width=w;nc.height=h;const nx=nc.getContext('2d'),id=nx.createImageData(w,h);
 for(let i=0;i<w*h;i++){id.data[i*4]=id.data[i*4+1]=id.data[i*4+2]=nrm[i];id.data[i*4+3]=255}nx.putImageData(id,0,0);
-let n=0;all.forEach((o,i)=>{const H2=Math.max(10,o.bl-o.tp)/.65,hh=Math.round(H2),cw=o.x1-o.x0+9,c=document.createElement('canvas');c.width=cw;c.height=hh;const cc=c.getContext('2d');cc.fillStyle='#fff';cc.fillRect(0,0,cw,hh);
+let n=0;all.forEach((o,i)=>{const H2=Math.max(10,HU)/.65,hh=Math.round(H2),cw=o.x1-o.x0+9,c=document.createElement('canvas');c.width=cw;c.height=hh;const cc=c.getContext('2d');cc.fillStyle='#fff';cc.fillRect(0,0,cw,hh);
 const yt=Math.round(o.bl-.8*H2),ys0=Math.max(o.b0,yt),ys1=Math.min(o.b1+1,yt+hh),sx0=Math.max(0,o.x0-4),sx1=Math.min(w,o.x1+5);
 if(ys1>ys0&&sx1>sx0)cc.drawImage(nc,sx0,ys0,sx1-sx0,ys1-ys0,sx0-(o.x0-4),ys0-yt,sx1-sx0,ys1-ys0);
 const kk=400/hh,t=document.createElement('canvas');t.width=Math.max(1,Math.round(cw*kk));t.height=400;t.getContext('2d').drawImage(c,0,0,t.width,t.height);
@@ -318,7 +322,11 @@ const g=mkGlyph(t);if(g){G.set(chars[i],g);n++}});
 tiles();sched();msg.textContent='Загружено букв: '+n+' из '+chars.length+'. Если какая-то вышла плохо, нажмите на её плитку и переснимите.'}
 $('allf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const u=URL.createObjectURL(f),i=new Image();i.onload=()=>{lastSheet=i;sheetRun();URL.revokeObjectURL(u)};i.src=u};
 $('gap').addEventListener('input',sheetRun);$('allch').addEventListener('change',sheetRun);
-$('pre').addEventListener('change',()=>{$('allch').value=$('pre').value;sheetRun()});$('allch').value=$('pre').value;
+const RUL='абвгдеёжзийклмнопрстуфхцчшщъыьэюя',ENL='abcdefghijklmnopqrstuvwxyz',DIG='0123456789',PUN='.,!?-:;()';
+function presetStr(){const k=$('pre').value,pn=$('ppun').checked&&!['dig','ruL','ruU','enL','enU'].includes(k)?PUN:'',U=t=>t.toUpperCase();
+const m={ru:DIG+U(RUL)+RUL,en:DIG+U(ENL)+ENL,both:DIG+U(RUL)+U(ENL)+RUL+ENL,ruL:RUL,ruU:U(RUL),enL:ENL,enU:U(ENL),dig:DIG};return m[k]+pn}
+function presetSet(){$('allch').value=presetStr();sheetRun()}
+$('pre').addEventListener('change',presetSet);$('ppun').addEventListener('change',presetSet);$('allch').value=presetStr();
 
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.pn').forEach(p=>p.hidden=p.id!==b.dataset.t)});
 function inkMask(img){const iw=img.naturalWidth,ih=img.naturalHeight,k=Math.min(1,1400/Math.max(iw,ih)),w=Math.round(iw*k),h=Math.round(ih*k),c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0,w,h);
