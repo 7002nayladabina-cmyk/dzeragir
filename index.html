@@ -41,6 +41,7 @@ canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-
 [hidden]{display:none!important}
 #jtxt{min-height:70px}
 </style></head><body>
+<div class="wrap">
 <div>
 <div class="tabs"><button class="tab on" data-t="t0">Текст</button><button class="tab" data-t="t1">Бумага</button><button class="tab" data-t="t2">Почерк</button><button class="tab" data-t="t3">Соединения</button><button class="tab" data-t="t4">Чернила</button></div>
 <section class="pn" id="t0"><div class="card"><h1>Мой почерк на бумаге</h1>
@@ -76,7 +77,11 @@ canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-
 <label>Разрыв между буквами<output id="o_gap">0.15</output><input type="range" id="gap" min="0.04" max="0.5" step="0.01" value="0.15"></label>
 <label>Фото листа<input type="file" id="allf" accept="image/*"></label>
 <p class="hint" id="allmsg"></p><div class="row"><button type="button" id="gclr">Удалить все буквы</button></div>
-<div id="shtools" style="display:none"><div class="row"><button type="button" id="shdel" class="p">Убрать пятно</button><button type="button" id="shmerge">Склеить с соседним</button><button type="button" id="shany">Применить по порядку</button></div></div><canvas id="sheetprev" style="display:none"></canvas></div>
+<div id="shtools" style="display:none"><div class="row"><button type="button" id="shdraw">Рисовать рамку</button><button type="button" id="shdel" class="p">Убрать рамку</button><button type="button" id="shmerge">Склеить с соседней</button></div>
+<div class="row"><button type="button" id="shclr">Очистить все рамки</button><button type="button" id="shauto">Найти автоматически</button><button type="button" id="shany" class="p">Применить по порядку</button></div>
+<label>Масштаб листа<select id="shzoom"><option value="100">100%</option><option value="150">150%</option><option value="200">200%</option><option value="300">300%</option></select></label>
+<p class="hint">«Рисовать рамку»: проведите пальцем по листу, чтобы обвести одну букву. Рамки сами выстраиваются в порядке чтения (по строкам, слева направо), и каждая получает свою букву из списка. В режиме рисования лист не прокручивается: для прокрутки выберите «Убрать рамку».</p></div>
+<div id="shwrap" style="overflow:auto;max-height:75vh;border-radius:6px"><canvas id="sheetprev" style="display:none"></canvas></div></div>
 <details class="card"><summary>Поправить отдельные буквы (загружено: <span id="cnt">0</span>)</summary>
 <p class="hint">Загрузите по картинке на каждую букву (ручка на белом фоне). На всех картинках низ строки должен быть на одном уровне, хвостики (у, р, д) уходят ниже. Лишнее слева и справа обрежется само. Если буквы нет — подставится рукописный шрифт.</p>
 <label>Сразу много файлов (имя файла = буква: <b>а.png</b>, заглавная — <b>а_up.png</b>; знаки: dot, comma, excl, quest, dash, colon, semi)
@@ -313,10 +318,10 @@ if(ink>bh*bh*.006&&x1-x0>=bh*.05)it.push({x0,x1,top,bot,b0,b1})}
 if(!it.length)continue;const bots=it.map(o=>o.bot).sort((p,q)=>p-q),tops=it.map(o=>o.top).sort((p,q)=>p-q),bl=bots[bots.length>>1],tp=tops[Math.floor(tops.length*.1)];
 for(const o of it){o.bl=bl;all.push(o)}}
 const hts=all.map(o=>Math.max(1,o.bl-o.top)).sort((p,q)=>p-q),HU=hts.length?hts[Math.min(hts.length-1,Math.floor(hts.length*.85))]:20;
-SH={sc,nrm,w,h,all,HU,forced:false}}
-function shDraw(){if(!SH)return;const{sc,w,h,all,forced}=SH,chars=shChars(),pc=$('sheetprev'),pk=Math.min(1,900/w),ok=all.length===chars.length||forced;pc.width=Math.round(w*pk);pc.height=Math.round(h*pk);pc.style.display='block';const q=pc.getContext('2d');q.drawImage(sc,0,0,pc.width,pc.height);q.lineWidth=2;q.font='bold 13px system-ui';
-all.forEach((o,i)=>{q.strokeStyle=ok?'#1a9b4a':'#e5322d';q.fillStyle=q.strokeStyle;q.strokeRect(o.x0*pk,o.top*pk,(o.x1-o.x0)*pk,(o.bot-o.top)*pk);q.fillText(ok&&i<chars.length?chars[i]:String(i+1),o.x0*pk,o.top*pk-3)})}
-function shApply(){if(!SH)return;const msg=$('allmsg'),chars=shChars(),{nrm,w,h,all,HU}=SH,cnt=Math.min(all.length,chars.length);
+SH={sc,nrm,w,h,all,HU,mask,forced:false,manual:false}}
+function shDraw(){if(!SH)return;const{sc,w,h,all,forced}=SH,chars=shChars(),pc=$('sheetprev'),pk=Math.min(1,900/w),ok=all.length===chars.length||forced||SH.manual;pc.width=Math.round(w*pk);pc.height=Math.round(h*pk);pc.style.display='block';const q=pc.getContext('2d');q.drawImage(sc,0,0,pc.width,pc.height);q.lineWidth=2;q.font='bold 13px system-ui';
+all.forEach((o,i)=>{q.strokeStyle=ok?'#1a9b4a':'#e5322d';q.fillStyle=q.strokeStyle;q.strokeRect(o.x0*pk,o.top*pk,(o.x1-o.x0)*pk,(o.bot-o.top)*pk);q.fillText(ok&&i<chars.length?chars[i]:String(i+1),o.x0*pk,o.top*pk-3)});if(SH.tmp){const t=SH.tmp;q.save();q.setLineDash([6,4]);q.strokeStyle='#2a5bd7';q.strokeRect(Math.min(t.x0,t.x1)*pk,Math.min(t.y0,t.y1)*pk,Math.abs(t.x1-t.x0)*pk,Math.abs(t.y1-t.y0)*pk);q.restore()}}
+function shApply(){if(!SH)return;const msg=$('allmsg'),chars=shChars(),{nrm,w,h,all}=SH,HU=shHU(all),cnt=Math.min(all.length,chars.length);
 const nc=document.createElement('canvas');nc.width=w;nc.height=h;const nx=nc.getContext('2d'),id=nx.createImageData(w,h);
 for(let i=0;i<w*h;i++){id.data[i*4]=id.data[i*4+1]=id.data[i*4+2]=nrm[i];id.data[i*4+3]=255}nx.putImageData(id,0,0);
 let n=0;all.slice(0,cnt).forEach((o,i)=>{const H2=Math.max(10,HU)/.65,hh=Math.round(H2),cw=o.x1-o.x0+9,c=document.createElement('canvas');c.width=cw;c.height=hh;const cc=c.getContext('2d');cc.fillStyle='#fff';cc.fillRect(0,0,cw,hh);
@@ -329,13 +334,32 @@ function shAfter(){shDraw();const chars=shChars(),n=SH.all.length,msg=$('allmsg'
 if(n===chars.length){shApply();return}
 msg.textContent='Нашлось рамок: '+n+', а нужно '+chars.length+'. Красные рамки — то, что нашла программа. Нажмите «Убрать пятно» и коснитесь лишней рамки, или «Склеить с соседним» и коснитесь части буквы, чтобы объединить её с рамкой справа. Или нажмите «Применить по порядку»: программа возьмёт рамки как есть, не гадая, что на них нарисовано.'}
 function sheetRun(){if(!lastSheet)return;shDetect();shAfter()}
-$('shdel').onclick=()=>{shMode='del';$('shdel').classList.add('p');$('shmerge').classList.remove('p')};
-$('shmerge').onclick=()=>{shMode='merge';$('shmerge').classList.add('p');$('shdel').classList.remove('p')};
+const shHU=al=>{const h=al.map(o=>Math.max(1,o.bl-o.top)).sort((p,q)=>p-q);return h.length?h[Math.min(h.length-1,Math.floor(h.length*.85))]:20};
+function shSort(){const al=SH.all;if(!al.length)return;const hh=al.map(o=>o.bot-o.top).sort((p,q)=>p-q),th=Math.max(10,hh[hh.length>>1]*.6);
+al.sort((p,q)=>(p.top+p.bot)-(q.top+q.bot));const rows=[];for(const o of al){const yc=(o.top+o.bot)/2,r=rows[rows.length-1];if(r&&yc-r.yc<th){r.it.push(o);r.yc=(r.yc*(r.it.length-1)+yc)/r.it.length}else rows.push({it:[o],yc})}
+SH.all=[];for(const r of rows){r.it.sort((p,q)=>p.x0-q.x0);const bs=r.it.map(o=>o.bot).sort((p,q)=>p-q),bl=bs[bs.length>>1];for(const o of r.it){o.bl=bl;SH.all.push(o)}}}
+function shSetMode(m){shMode=m;for(const[k,id]of[['del','shdel'],['merge','shmerge'],['draw','shdraw']])$(id).classList.toggle('p',k===m);$('sheetprev').style.touchAction=m==='draw'?'none':'auto'}
+$('shdel').onclick=()=>shSetMode('del');$('shmerge').onclick=()=>shSetMode('merge');$('shdraw').onclick=()=>shSetMode('draw');
 $('shany').onclick=()=>{if(!SH)return;SH.forced=true;shDraw();shApply()};
-$('sheetprev').addEventListener('click',e=>{if(!SH)return;const pc=e.currentTarget,r=pc.getBoundingClientRect(),pk=pc.width/SH.w,x=(e.clientX-r.left)*pc.width/r.width/pk,y=(e.clientY-r.top)*pc.height/r.height/pk,al=SH.all;let idx=-1;
+$('shclr').onclick=()=>{if(!SH)return;SH.all=[];SH.manual=true;SH.forced=false;shDraw();$('allmsg').textContent='Рамок нет. Нажмите «Рисовать рамку» и обведите первую букву.'};
+$('shauto').onclick=()=>{if(lastSheet)sheetRun()};
+$('shzoom').onchange=()=>{$('sheetprev').style.width=$('shzoom').value+'%'};
+const shPt=e=>{const pc=$('sheetprev'),r=pc.getBoundingClientRect(),pk=pc.width/SH.w;return[(e.clientX-r.left)*pc.width/r.width/pk,(e.clientY-r.top)*pc.height/r.height/pk]};
+function shAddFrame(d){const{w,h,mask}=SH,x0=Math.max(0,Math.round(Math.min(d.x0,d.x1))),x1=Math.min(w-1,Math.round(Math.max(d.x0,d.x1))),y0=Math.max(0,Math.round(Math.min(d.y0,d.y1))),y1=Math.min(h-1,Math.round(Math.max(d.y0,d.y1)));
+if(x1-x0<6||y1-y0<6)return;let ax=w,bx=-1,ay=h,by=-1,n=0;for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(mask[y*w+x]){n++;if(x<ax)ax=x;if(x>bx)bx=x;if(y<ay)ay=y;if(y>by)by=y}
+if(n<8){$('allmsg').textContent='В этой рамке ничего не нарисовано. Обведите букву полностью.';return}
+SH.all.push({x0:ax,x1:bx,top:ay,bot:by,b0:y0,b1:y1,bl:by});SH.manual=true;SH.forced=false;shSort();shDraw();
+const c=shChars().length;$('allmsg').textContent='Рамок: '+SH.all.length+' из '+c+'. Обведите следующую букву или нажмите «Применить по порядку».'}
+let shDrag=null;const spv=$('sheetprev');
+spv.addEventListener('pointerdown',e=>{if(!SH)return;const[x,y]=shPt(e);shDrag={x0:x,y0:y,x1:x,y1:y,sx:e.clientX,sy:e.clientY};if(shMode==='draw'){e.preventDefault();try{spv.setPointerCapture(e.pointerId)}catch(_){}}});
+spv.addEventListener('pointermove',e=>{if(!shDrag||shMode!=='draw')return;e.preventDefault();const[x,y]=shPt(e);shDrag.x1=x;shDrag.y1=y;SH.tmp=shDrag;shDraw()});
+spv.addEventListener('pointercancel',()=>{shDrag=null;if(SH){SH.tmp=null;shDraw()}});
+spv.addEventListener('pointerup',e=>{if(!shDrag||!SH)return;const d=shDrag;shDrag=null;SH.tmp=null;
+if(shMode==='draw'){shAddFrame(d);if(SH)shDraw();return}
+if(Math.hypot(e.clientX-d.sx,e.clientY-d.sy)>8)return;const x=d.x0,y=d.y0,al=SH.all;let idx=-1;
 for(let i=0;i<al.length;i++){const o=al[i];if(x>=o.x0-8&&x<=o.x1+8&&y>=o.top-8&&y<=o.bot+8){idx=i;break}}if(idx<0)return;
-if(shMode==='del')al.splice(idx,1);else{const o=al[idx],n=al[idx+1];if(!n||n.b0!==o.b0)return;o.x0=Math.min(o.x0,n.x0);o.x1=Math.max(o.x1,n.x1);o.top=Math.min(o.top,n.top);o.bot=Math.max(o.bot,n.bot);al.splice(idx+1,1)}
-SH.forced=false;shAfter()});
+if(shMode==='del')al.splice(idx,1);else{const o=al[idx],n=al[idx+1];if(!n||n.b0!==o.b0&&!SH.manual)return;o.x0=Math.min(o.x0,n.x0);o.x1=Math.max(o.x1,n.x1);o.top=Math.min(o.top,n.top);o.bot=Math.max(o.bot,n.bot);o.b0=Math.min(o.b0,n.b0);o.b1=Math.max(o.b1,n.b1);al.splice(idx+1,1)}
+SH.forced=false;if(SH.manual){shSort();shDraw()}else shAfter()});
 $('allf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const u=URL.createObjectURL(f),i=new Image();i.onload=()=>{lastSheet=i;sheetRun();URL.revokeObjectURL(u)};i.src=u};
 $('gap').addEventListener('input',sheetRun);$('allch').addEventListener('change',sheetRun);
 const RUL='абвгдеёжзийклмнопрстуфхцчшщъыьэюя',ENL='abcdefghijklmnopqrstuvwxyz',DIG='0123456789',PUN='.,!?-:;()';
