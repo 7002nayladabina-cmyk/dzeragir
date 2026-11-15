@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Мой почерк на бумаге</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#2a5bd7"><link rel="apple-touch-icon" href="icon-192.png"><link rel="icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Caveat&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f4ef;--fg:#222;--card:#fff;--line:#d9d6cf;--acc:#2a5bd7;--mut:#777;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1b1d;--fg:#eee;--card:#27272a;--line:#3a3a3f;--acc:#7aa2ff;--mut:#9a9aa2;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1b1b1d;--fg:#eee;--card:#27272a;--line:#3a3a3f;--acc:#7aa2ff;--mut:#9a9aa2;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1100px;margin:auto;padding:12px;display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:900px){.wrap{grid-template-columns:minmax(0,430px) minmax(0,1fr)}.prev{order:0!important;position:sticky;top:12px;align-self:start}}
+.prev{order:-1}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+h1{font-size:18px;margin:0 0 8px}
+summary{cursor:pointer;font-weight:600}
+textarea{width:100%;min-height:90px;font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+label{display:block;margin:8px 0 0;font-size:13px}
+label output{float:right;color:var(--mut)}
+input[type=range]{width:100%}
+select,button{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+button.p{background:var(--acc);color:#fff;border-color:var(--acc)}
+.row{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+.t{width:34px;height:34px;padding:0;font-size:15px}
+.t img{width:100%;height:100%;object-fit:contain;background:#fff;border-radius:6px}
+.t.on{border-color:var(--acc)}
+.hint{color:var(--mut);font-size:12px;margin:6px 0}
+canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:6px;background:#fff}
+.nav{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:8px 0}
+#sv img{width:100%;margin-top:8px}
+.padw{position:relative;border:1px solid var(--line);border-radius:8px;background:#fff;overflow:hidden}
+.padw canvas{border:0;border-radius:0;touch-action:none;position:relative;background:transparent;cursor:crosshair}
+.gl{position:absolute;left:0;right:0;height:1px;background:#a9c1e6;pointer-events:none}
+.gl.b{background:#e55;height:2px}
+</style></head><body>
+<div class="wrap">
+<div>
+<div class="card"><h1>Мой почерк на бумаге</h1>
+<textarea id="txt">Привет! Это текст, написанный моим почерком.</textarea></div>
+
+<div class="card"><label style="margin:0;font-weight:600">Расстояние между буквами<output id="o_ls"></output><input type="range" id="ls" min="-20" max="20" step="0.5" value="0"></label>
+<label style="font-weight:600">Расстояние между словами<output id="o_ws"></output><input type="range" id="ws" min="-30" max="40" step="1" value="0"></label></div>
+
+<details class="card" open><summary>Буквы (загружено: <span id="cnt">0</span>)</summary>
+<p class="hint">Загрузите по картинке на каждую букву (ручка на белом фоне). На всех картинках низ строки должен быть на одном уровне, хвостики (у, р, д) уходят ниже. Лишнее слева и справа обрежется само. Если буквы нет — подставится рукописный шрифт.</p>
+<label>Сразу много файлов (имя файла = буква: <b>а.png</b>, заглавная — <b>а_up.png</b>; знаки: dot, comma, excl, quest, dash, colon, semi)
+<input type="file" id="bulk" accept="image/*" multiple></label>
+<p class="hint">Нажмите на плитку с буквой и напишите её пальцем в рамке под плитками:</p>
+<div id="tiles"></div>
+<div id="padbox" style="margin-top:10px"><b>Пишем букву: <span id="pch">а</span></b> <button class="p" id="pcam">📷 Сфоткать с бумаги</button>
+<p class="hint" id="cmsg" style="display:none;color:#d33"><span></span></p>
+<div id="camw" style="display:none;margin:8px 0"><div class="padw"><video id="vid" playsinline muted autoplay style="width:100%;aspect-ratio:1.6;object-fit:cover;display:block"></video><i class="gl" style="top:15%"></i><i class="gl" style="top:35%"></i><i class="gl b" style="top:80%"></i></div>
+<div class="row"><button class="p" id="snap">Снять</button><button id="cclose">Закрыть камеру</button></div>
+<p class="hint">Поставьте низ буквы на красную линию, нажмите «Снять». Следующая буква откроется сама.</p></div>
+<input type="file" id="cam" accept="image/*" capture="environment" hidden>
+<div class="padw"><i class="gl" style="top:15%"></i><i class="gl" style="top:35%"></i><i class="gl b" style="top:80%"></i><canvas id="pad" width="640" height="400"></canvas></div>
+<div class="row"><button id="pclr">Очистить</button><button class="p" id="psave">Сохранить букву</button><button id="pfile">Из файла</button></div>
+<p class="hint">Тело строчной буквы — между синей средней и красной линиями, заглавные и высокие буквы — до верхней, хвостики (у, р, д) — ниже красной. После сохранения откроется следующая буква.</p></div>
+<input type="file" id="one" accept="image/*" hidden>
+</details>
+
+<details class="card" open><summary>Соединение букв</summary>
+<label><input type="checkbox" id="join" checked> Соединять буквы в словах</label>
+<div id="sl3"></div>
+<label>Не соединять после букв<input id="nj" type="text" style="width:100%" placeholder="например: ьъ"></label>
+</details>
+
+<details class="card"><summary>Бумага и вид</summary>
+<label>Бумага<select id="paper"><option value="grid">Тетрадь в клетку</option><option value="ruled">Тетрадь в линейку</option><option value="plain">Чистый лист А4</option></select></label>
+<div id="sl1"></div>
+<label>Цвет чернил <input type="color" id="ink" value="#1f3a8a"></label>
+</details>
+
+<details class="card"><summary>Тень от руки</summary>
+<label>Рука<select id="hand"><option value="n">Без тени</option><option value="f">Женская</option><option value="m">Мужская</option></select></label>
+<div id="sl2"></div>
+<p class="hint">Тень стоит у конца текста на странице. Двигайте ползунками, если нужно.</p>
+</details>
+</div>
+
+<div class="prev"><div class="card">
+<canvas id="cv"></canvas>
+<div class="nav"><button id="pv">←</button><span id="pg"></span><button id="nx">→</button></div>
+<div class="row"><button class="p" id="dl">Скачать страницу</button><button id="dla">Все страницы</button></div>
+<div id="sv"></div>
+</div></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id),W=794,H=1123,S=2,CELL=18.9;
+const cv=$('cv'),ctx=cv.getContext('2d');cv.width=W*S;cv.height=H*S;
+const mc=document.createElement('canvas').getContext('2d');
+const G=new Map();let pages=[[]],cur=0,pick='',raf=0,L={pitch:38,y0:80};
+const ROWS=['абвгдеёжзийклмнопрстуфхцчшщъыьэюя','АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ','abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ','0123456789','.,!?-:;()"\''];
+const NAMES={dot:'.',comma:',',excl:'!',quest:'?',dash:'-',colon:':',semi:';'};
+const mk=(id,l,a,b,s,v)=>`<label>${l}<output id="o_${id}">${v}</output><input type="range" id="${id}" min="${a}" max="${b}" step="${s}" value="${v}"></label>`;
+$('sl1').innerHTML=[['size','Размер букв',20,80,1,38],['pitch','Межстрочный интервал',20,90,1,38],['ml','Левое поле',20,200,1,70],['mt','Верхнее поле',30,300,1,80],['jit','Неровность почерка',0,10,1,3],['vo','Сдвиг букв по вертикали',-20,20,1,0]].map(a=>mk(...a)).join('');
+$('sl2').innerHTML=[['hop','Прозрачность тени',0.05,0.8,0.05,0.35],['hdx','Сдвиг по горизонтали',-250,250,1,0],['hdy','Сдвиг по вертикали',-250,250,1,0]].map(a=>mk(...a)).join('');
+$('sl3').innerHTML=mk('jw','Толщина соединения',1,8,0.5,2.5);
+document.querySelectorAll('input[type=range]').forEach(r=>{const o=$('o_'+r.id);o.textContent=r.value})
+
+function mkGlyph(img){const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height,c=document.createElement('canvas');c.width=w;c.height=h;
+const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0);const d=x.getImageData(0,0,w,h),a=d.data;let x0=w,x1=-1;
+for(let i=0;i<w*h;i++){const p=i*4,lum=a[p]*.3+a[p+1]*.59+a[p+2]*.11,al=Math.min(1,Math.max(0,(255-lum-25)/140))*a[p+3]/255;
+a[p]=a[p+1]=a[p+2]=0;a[p+3]=al*255;if(al>.3){const px=i%w;if(px<x0)x0=px;if(px>x1)x1=px}}
+if(x1<x0)return null;x.putImageData(d,0,0);const tw=x1-x0+1,t=document.createElement('canvas');t.width=tw;t.height=h;
+t.getContext('2d').drawImage(c,x0,0,tw,h,0,0,tw,h);const edge=xs=>{let s=0,n=0;for(const xx of xs)for(let yy=0;yy<h;yy++){const al=a[(yy*w+xx)*4+3];if(al>80){s+=yy*al;n+=al}}return n?s/n:h*.6};
+const iy=edge([x0,x0+1,x0+2].filter(v=>v<=x1)),ey=edge([x1,x1-1,x1-2].filter(v=>v>=x0));
+return{c:t,w:tw,h,k:null,cc:null,u:null,iy,ey}}
+function colored(g,col){if(g.k===col)return g.cc;const t=document.createElement('canvas');t.width=g.w;t.height=g.h;const x=t.getContext('2d');
+x.drawImage(g.c,0,0);x.globalCompositeOperation='source-in';x.fillStyle=col;x.fillRect(0,0,g.w,g.h);g.k=col;g.cc=t;return t}
+function load(f,ch){return new Promise(res=>{const u=URL.createObjectURL(f),i=new Image();i.onload=()=>{let src=i;if(i.naturalHeight>400){const k=400/i.naturalHeight,t=document.createElement('canvas');t.width=Math.round(i.naturalWidth*k);t.height=400;t.getContext('2d').drawImage(i,0,0,t.width,t.height);src=t}const g=mkGlyph(src);if(g)G.set(ch,g);URL.revokeObjectURL(u);res()};i.onerror=res;i.src=u})}
+function tiles(){persist();const box=$('tiles');box.innerHTML='';for(const r of ROWS){const row=document.createElement('div');row.className='row';
+for(const ch of r){const b=document.createElement('button'),g=G.get(ch);b.type='button';b.className='t'+(g?' on':'');b.title=ch;
+if(g){const i=new Image();g.u=g.u||g.c.toDataURL();i.src=g.u;b.append(i)}else b.textContent=ch;
+b.onclick=()=>{openPad(ch);startCam()};row.append(b)}box.append(row)}$('cnt').textContent=G.size}
+$('one').onchange=async e=>{if(e.target.files[0])await load(e.target.files[0],pick);e.target.value='';tiles();sched()};
+$('bulk').onchange=async e=>{for(const f of e.target.files){const s=f.name.replace(/\.[^.]+$/,'');let ch,m;
+if(m=s.match(/^(.)_up$|^up_(.)$/i))ch=(m[1]||m[2]).toUpperCase();else if([...s].length===1)ch=s;else ch=NAMES[s.toLowerCase()];
+if(ch)await load(f,ch)}e.target.value='';tiles();sched()};
+
+function layout(){const v=k=>+$(k).value,size=v('size'),ls=v('ls'),ws=v('ws'),jit=v('jit'),paper=$('paper').value,ml=v('ml');
+const pitch=paper==='plain'?v('pitch'):Math.max(1,Math.round(v('pitch')/CELL))*CELL;
+const y0=paper==='plain'?v('mt'):Math.max(1,Math.round(v('mt')/CELL))*CELL,mr=40,bot=H-60;L={pitch,y0};const JN=$('join').checked,NJ=new Set([...$('nj').value.toLowerCase()]);
+let r=7;const rnd=()=>{r|=0;r=r+0x6D2B79F5|0;let t=Math.imul(r^r>>>15,1|r);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+pages=[[]];let x=ml,y=y0;const nl=()=>{x=ml;y+=pitch;if(y>bot){pages.push([]);y=y0}};
+mc.font=size+'px Caveat,cursive';
+for(const line of $('txt').value.split('\n')){
+for(const w of line.split(/ +/)){if(!w){x+=Math.max(2,size*.35+ws);continue}
+const arr=[...w].map(ch=>{let g=G.get(ch),k=1;if(!g&&ch!==ch.toLowerCase()){g=G.get(ch.toLowerCase());k=1.12}
+const h=size*k;return{ch,g,h,w:g?g.w*h/g.h:mc.measureText(ch).width,fs:size}});
+const tw=arr.reduce((a,o)=>a+Math.max(.5,o.w+ls),0);
+if(x+tw>W-mr&&x>ml)nl();
+for(let k=0;k<arr.length;k++){const o=arr[k],n=arr[k+1];o.nx=(n&&o.g&&n.g&&JN&&!NJ.has(o.ch.toLowerCase()))?n:null;o.x=x;o.y=y;o.rot=(rnd()-.5)*jit*.012;o.dy=(rnd()-.5)*jit*.5;o.s=1+(rnd()-.5)*jit*.012;pages[pages.length-1].push(o);x+=Math.max(.5,o.w+ls)}
+x+=Math.max(2,size*.35+ws)}
+nl()}
+if(pages.length>1&&!pages[pages.length-1].length)pages.pop();
+cur=Math.min(cur,pages.length-1)}
+
+function hand(tx,ty,m){const f=m?1.15:.92,aw=m?46:34,op=+$('hop').value;ctx.save();ctx.setTransform(S,0,0,S,0,0);
+ctx.shadowColor=`rgba(20,20,30,${op})`;ctx.shadowBlur=16*S;ctx.shadowOffsetX=4000*S;ctx.shadowOffsetY=0;
+ctx.translate(tx-4000,ty);ctx.scale(f,f);ctx.fillStyle=ctx.strokeStyle='#000';ctx.lineCap='round';
+ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(95,-165);ctx.stroke();
+for(const[a,b,c,d,e]of[[80,-60,50,15,-.6],[95,-22,52,16,-.3],[105,14,48,15,-.1],[190,0,m?78:64,m?62:50,-.25]]){ctx.beginPath();ctx.ellipse(a,b,c,d,e,0,7);ctx.fill()}
+ctx.translate(240,12);ctx.rotate(.28);ctx.beginPath();ctx.roundRect?ctx.roundRect(0,-aw,480,aw*2,aw*.6):ctx.rect(0,-aw,480,aw*2);ctx.fill();ctx.restore()}
+
+function draw(i){const paper=$('paper').value,ml=+$('ml').value,ink=$('ink').value,vo=+$('vo').value;
+ctx.setTransform(S,0,0,S,0,0);ctx.fillStyle='#fffffc';ctx.fillRect(0,0,W,H);ctx.lineWidth=.8;
+if(paper==='grid'){ctx.strokeStyle='rgba(90,150,215,.45)';ctx.beginPath();for(let p=0;p<=W;p+=CELL){ctx.moveTo(p,0);ctx.lineTo(p,H)}for(let p=0;p<=H;p+=CELL){ctx.moveTo(0,p);ctx.lineTo(W,p)}ctx.stroke()}
+if(paper==='ruled'){ctx.strokeStyle='rgba(90,150,215,.5)';ctx.beginPath();for(let p=L.y0-Math.floor(L.y0/L.pitch)*L.pitch;p<H;p+=L.pitch){ctx.moveTo(0,p);ctx.lineTo(W,p)}ctx.stroke()}
+if(paper!=='plain'){ctx.strokeStyle='rgba(220,70,70,.65)';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(ml-14,0);ctx.lineTo(ml-14,H);ctx.stroke()}
+const it=pages[i]||[];
+for(const o of it){if(o.ch===' ')continue;ctx.save();ctx.translate(o.x+o.w/2,o.y+o.dy);ctx.rotate(o.rot);ctx.scale(o.s,o.s);
+if(o.g)ctx.drawImage(colored(o.g,ink),-o.w/2,-o.h*.8+vo,o.w,o.h);
+else{ctx.fillStyle=ink;ctx.font=o.fs+'px Caveat,cursive';ctx.fillText(o.ch,-o.w/2,vo)}ctx.restore()}
+if($('join').checked){ctx.strokeStyle=ink;ctx.lineWidth=+$('jw').value;ctx.lineCap='round';for(const o of it){const n=o.nx;if(!n)continue;
+const sx=o.x+o.w,nx=n.x,sy=o.y+o.dy-o.h*.8+vo+o.g.ey*o.h/o.g.h,ty=n.y+n.dy-n.h*.8+vo+n.g.iy*n.h/n.g.h;
+ctx.beginPath();ctx.moveTo(sx-1,sy);ctx.bezierCurveTo((sx+nx)/2,sy,(sx+nx)/2,ty,nx+1,ty);ctx.stroke()}}
+const hk=$('hand').value;if(hk!=='n'&&it.length){const l=it[it.length-1];hand(l.x+l.w+ +$('hdx').value,l.y+ +$('hdy').value,hk==='m')}
+}
+function render(){raf=0;layout();draw(cur);$('pg').textContent='Страница '+(cur+1)+' из '+pages.length}
+function sched(){if(!raf)raf=requestAnimationFrame(render)}
+document.querySelectorAll('input,select,textarea').forEach(e=>e.addEventListener('input',()=>{const o=$('o_'+e.id);if(o)o.textContent=e.value;sched()}));
+$('pv').onclick=()=>{if(cur>0){cur--;render()}};$('nx').onclick=()=>{if(cur<pages.length-1){cur++;render()}};
+
+function blob(){return new Promise(r=>cv.toBlob(r,'image/png'))}
+async function save(i){draw(i);const b=await blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='page-'+(i+1)+'.png';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
+$('dl').onclick=async()=>{await save(cur);draw(cur)};
+$('dla').onclick=async()=>{for(let i=0;i<pages.length;i++)await save(i);draw(cur)};
+function padInit(c,lw){const x=c.getContext('2d');x.lineCap=x.lineJoin='round';x.lineWidth=lw;x.strokeStyle='#000';x.fillStyle='#000';let d=false,p=null,m=null;
+const pt=e=>{const r=c.getBoundingClientRect();return[(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height]};
+c.onpointerdown=e=>{e.preventDefault();try{c.setPointerCapture(e.pointerId)}catch(_){}d=true;p=pt(e);m=p;x.beginPath();x.arc(p[0],p[1],lw/2,0,7);x.fill()};
+c.onpointermove=e=>{if(!d)return;e.preventDefault();const q=pt(e),mid=[(p[0]+q[0])/2,(p[1]+q[1])/2];x.beginPath();x.moveTo(m[0],m[1]);x.quadraticCurveTo(p[0],p[1],mid[0],mid[1]);x.stroke();p=q;m=mid};
+c.onpointerup=c.onpointercancel=()=>{d=false};
+return()=>x.clearRect(0,0,c.width,c.height)}
+const clrG=padInit($('pad'),16),ALL=[...ROWS.join('')];
+function openPad(ch,keep){pick=ch;$('pch').textContent=ch;clrG();if(!keep)$('padbox').scrollIntoView({block:'center',behavior:'smooth'})}
+$('pclr').onclick=clrG;$('pfile').onclick=()=>{$('one').click()};
+$('psave').onclick=()=>{const g=mkGlyph($('pad'));if(!g){$('cmsg').style.display='block';$('cmsg').querySelector('span').textContent='Сначала напишите букву в рамке.';return}
+G.set(pick,g);const i=ALL.indexOf(pick);tiles();openPad(ALL[(i+1)%ALL.length],1);sched()};
+let stream=null;
+async function startCam(){const w=$('camw');if(stream){w.style.display='block';return}
+try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('vid').srcObject=stream;w.style.display='block'}
+catch(e){$('cmsg').style.display='block';$('cmsg').querySelector('span').textContent='Камера не открылась. Разрешите доступ к камере в настройках браузера или нажмите «Из файла».';$('cam').click()}}
+function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('camw').style.display='none'}
+function cover(src,sw,sh){const c=document.createElement('canvas');c.width=640;c.height=400;const x=c.getContext('2d'),k=Math.max(640/sw,400/sh),dw=sw*k,dh=sh*k;x.drawImage(src,(640-dw)/2,(400-dh)/2,dw,dh);
+const d=x.getImageData(0,0,640,400),a=d.data,hs=new Array(256).fill(0);for(let i=0;i<a.length;i+=4)hs[Math.round(a[i]*.3+a[i+1]*.59+a[i+2]*.11)]++;
+let n=0,p=255;for(let v=255;v>=0;v--){n+=hs[v];if(n>640*400*.05){p=Math.max(v,60);break}}
+for(let i=0;i<a.length;i+=4){const l=Math.min(255,(a[i]*.3+a[i+1]*.59+a[i+2]*.11)*255/p);a[i]=a[i+1]=a[i+2]=l;a[i+3]=255}x.putImageData(d,0,0);return c}
+function saveGlyph(c){const g=mkGlyph(c),h=$('cmsg').querySelector('span');if(!g){$('cmsg').style.display='block';h.textContent='Буква не найдена на снимке — попробуйте ещё раз.';return}G.set(pick,g);const i=ALL.indexOf(pick);tiles();openPad(ALL[(i+1)%ALL.length],1);sched()}
+$('snap').onclick=()=>{const v=$('vid');if(v.videoWidth)saveGlyph(cover(v,v.videoWidth,v.videoHeight))};
+$('cclose').onclick=stopCam;$('pcam').onclick=startCam;
+$('cam').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const u=URL.createObjectURL(f),i=new Image();i.onload=()=>{saveGlyph(cover(i,i.naturalWidth,i.naturalHeight));URL.revokeObjectURL(u)};i.src=u};
+let ready=false;
+function persist(){if(!ready)return;try{const o={};for(const[k,g]of G){g.u=g.u||g.c.toDataURL();o[k]={u:g.u,iy:g.iy,ey:g.ey,w:g.w,h:g.h}}localStorage.setItem('hw1',JSON.stringify(o))}catch(e){}}
+function restore(){let o={};try{o=JSON.parse(localStorage.getItem('hw1')||'{}')}catch(e){}let n=Object.keys(o).length;if(!n){ready=true;return}
+for(const k in o){const i=new Image(),q=o[k];i.onload=()=>{const c=document.createElement('canvas');c.width=q.w;c.height=q.h;c.getContext('2d').drawImage(i,0,0);G.set(k,{c,w:q.w,h:q.h,k:null,cc:null,u:q.u,iy:q.iy,ey:q.ey});if(--n===0){ready=true;tiles();sched()}};i.onerror=()=>{if(--n===0){ready=true;tiles();sched()}};i.src=q.u}}
+restore();
+openPad('а',1);
+tiles();render();document.fonts.load('30px Caveat','абв').then(sched);
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
