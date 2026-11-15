@@ -70,12 +70,12 @@ canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-
 </div></section>
 <section class="pn" id="t2" hidden><div class="card"><h1>Все буквы одной фотографией</h1>
 <p class="hint">Напишите буквы на листе по порядку, с заметными промежутками, рядами. Снимайте лист ровно сверху, чтобы бумага занимала весь кадр, без теней и без краёв стола.</p>
-<label>Что написано на листе (порядок: цифры, заглавные, строчные)<select id="pre"><option value="ru">Русский: цифры, заглавные, строчные (76)</option><option value="en">English: цифры, заглавные, строчные (62)</option><option value="both">Русский и English вместе (128)</option><option value="ruL">Только русские строчные (33)</option><option value="ruU">Только русские заглавные (33)</option><option value="enL">Only English lowercase (26)</option><option value="enU">Only English uppercase (26)</option><option value="dig">Только цифры (10)</option></select></label>
+<label>Что написано на листе (порядок: заглавные, строчные, цифры 0–9)<select id="pre"><option value="en">English: A–Z, a–z, 0–9 (62)</option><option value="ru">Русский: А–Я, а–я, 0–9 (76)</option><option value="both">Русский и English вместе (128)</option><option value="ruL">Только русские строчные (33)</option><option value="ruU">Только русские заглавные (33)</option><option value="enL">Only English lowercase (26)</option><option value="enU">Only English uppercase (26)</option><option value="dig">Только цифры (10)</option></select></label>
 <label><input type="checkbox" id="ppun" checked> Знаки в конце листа: . , ! ? - : ; ( )</label>
 <label>Буквы по порядку (можно поправить)<input id="allch" type="text" style="width:100%"></label>
 <label>Разрыв между буквами<output id="o_gap">0.15</output><input type="range" id="gap" min="0.04" max="0.5" step="0.01" value="0.15"></label>
 <label>Фото листа<input type="file" id="allf" accept="image/*"></label>
-<p class="hint" id="allmsg"></p><canvas id="sheetprev" style="display:none"></canvas></div>
+<p class="hint" id="allmsg"></p><div id="shtools" style="display:none"><div class="row"><button type="button" id="shdel" class="p">Убрать пятно</button><button type="button" id="shmerge">Склеить с соседним</button><button type="button" id="shany">Применить по порядку</button></div></div><canvas id="sheetprev" style="display:none"></canvas></div>
 <details class="card"><summary>Поправить отдельные буквы (загружено: <span id="cnt">0</span>)</summary>
 <p class="hint">Загрузите по картинке на каждую букву (ручка на белом фоне). На всех картинках низ строки должен быть на одном уровне, хвостики (у, р, д) уходят ниже. Лишнее слева и справа обрежется само. Если буквы нет — подставится рукописный шрифт.</p>
 <label>Сразу много файлов (имя файла = буква: <b>а.png</b>, заглавная — <b>а_up.png</b>; знаки: dot, comma, excl, quest, dash, colon, semi)
@@ -109,7 +109,10 @@ canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-
 <p class="hint">Напишите от руки пару строк обычным почерком и сфотографируйте лист сверху. Ниже впишите тот же текст, строка в строку. Программа посмотрит, какая часть букв у вас слитна, и будет соединять так же.</p>
 <label>Что написано на фото<textarea id="jtxt" placeholder="Например:&#10;Привет как дела&#10;Сегодня хорошая погода"></textarea></label>
 <label>Фото рукописного текста<input type="file" id="jfile" accept="image/*"></label>
-<p class="hint" id="jmsg"></p></div></section>
+<p class="hint" id="jmsg"></p>
+<label><input type="checkbox" id="jx" checked> Соединять так, как в моём образце (каждая пара букв отдельно)</label>
+<div id="jlist" class="hint" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+<button type="button" id="jreset">Сбросить образец</button></div></section>
 </div>
 
 <div class="prev"><div class="card">
@@ -156,7 +159,7 @@ if(ch)await load(f,ch)}e.target.value='';tiles();sched()};
 
 function layout(){const v=k=>+$(k).value,size=v('size'),ls=v('ls'),ws=v('ws'),jit=v('jit'),paper=$('paper').value,ml=v('ml');
 const pitch=(paper==='plain'||paper==='none')?v('pitch'):Math.max(1,Math.round(v('pitch')/CELL))*CELL;
-const y0=(paper==='plain'||paper==='none')?v('mt'):Math.max(1,Math.round(v('mt')/CELL))*CELL,mr=40,bot=H-60;L={pitch,y0};let pn=0;const jf=+$('jf').value/100,JN=$('join').checked,NJ=new Set([...$('nj').value.toLowerCase()]);
+const y0=(paper==='plain'||paper==='none')?v('mt'):Math.max(1,Math.round(v('mt')/CELL))*CELL,mr=40,bot=H-60;L={pitch,y0};let pn=0;const jf=+$('jf').value/100,JN=$('join').checked,NJ=new Set([...$('nj').value.toLowerCase()]),JX=$('jx').checked;
 let r=7;const rnd=()=>{r|=0;r=r+0x6D2B79F5|0;let t=Math.imul(r^r>>>15,1|r);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
 pages=[[]];let x=ml,y=y0;const nl=()=>{x=ml;y+=pitch;if(y>bot){pages.push([]);y=y0}};
 mc.font=size+'px Caveat,cursive';
@@ -166,7 +169,7 @@ const arr=[...w].map(ch=>{let g=G.get(ch),k=1;if(!g&&ch!==ch.toLowerCase()){g=G.
 const h=size*k;return{ch,g,h,w:g?g.w*h/g.h:mc.measureText(ch).width,fs:size}});
 const tw=arr.reduce((a,o)=>a+Math.max(.5,o.w+ls),0);
 if(x+tw>W-mr&&x>ml)nl();
-for(let k=0;k<arr.length;k++){const o=arr[k],n=arr[k+1];const hj=((++pn*2654435761)>>>0)/4294967296;o.nx=(n&&JN&&hj<jf&&/\p{L}/u.test(o.ch)&&/\p{L}/u.test(n.ch)&&!NJ.has(o.ch.toLowerCase()))?n:null;o.x=x;o.y=y;o.rot=(rnd()-.5)*jit*.012;o.dy=(rnd()-.5)*jit*.5;o.s=1+(rnd()-.5)*jit*.012;pages[pages.length-1].push(o);x+=Math.max(.5,o.w+ls)}
+for(let k=0;k<arr.length;k++){const o=arr[k],n=arr[k+1];const hj=((++pn*2654435761)>>>0)/4294967296;const jr=n&&JX?JM[(o.ch+n.ch).toLowerCase()]:null;o.jy=null;o.nx=(n&&JN&&(jr?jr.j>=.5:hj<jf)&&/\p{L}/u.test(o.ch)&&/\p{L}/u.test(n.ch)&&!NJ.has(o.ch.toLowerCase()))?n:null;if(o.nx&&jr&&jr.j>=.5)o.jy=jr.y;o.x=x;o.y=y;o.rot=(rnd()-.5)*jit*.012;o.dy=(rnd()-.5)*jit*.5;o.s=1+(rnd()-.5)*jit*.012;pages[pages.length-1].push(o);x+=Math.max(.5,o.w+ls)}
 x+=Math.max(2,size*.35+ws)}
 nl()}
 if(pages.length>1&&!pages[pages.length-1].length)pages.pop();
@@ -191,7 +194,7 @@ for(const o of it){if(o.ch===' ')continue;ctx.save();ctx.translate(o.x+o.w/2,o.y
 if(o.g)ctx.drawImage(colored(o.g,ink),-o.w/2,-o.h*.8+vo,o.w,o.h);
 else{ctx.fillStyle=ink;ctx.font=o.fs+'px Caveat,cursive';ctx.fillText(o.ch,-o.w/2,vo)}ctx.restore()}
 if($('join').checked){ctx.strokeStyle=ink;ctx.lineWidth=+$('jw').value;ctx.lineCap='round';const ext=+$('jl').value,eyf=o=>o.g?o.y+o.dy-o.h*.8+vo+o.g.ey*o.h/o.g.h:o.y+o.dy+vo-o.fs*.2,iyf=o=>o.g?o.y+o.dy-o.h*.8+vo+o.g.iy*o.h/o.g.h:o.y+o.dy+vo-o.fs*.2;
-for(const o of it){const n=o.nx;if(!n)continue;const sx=o.x+o.w-ext*.4,nx=n.x+ext*.4,sy=eyf(o),ty=iyf(n),mx=(sx+nx)/2;
+for(const o of it){const n=o.nx;if(!n)continue;const sx=o.x+o.w-ext*.4,nx=n.x+ext*.4,fy=o.jy!=null?o.y+o.dy+vo-o.jy*.65*o.h:null,sy=fy!=null?fy:eyf(o),ty=fy!=null?fy:iyf(n),mx=(sx+nx)/2;
 ctx.beginPath();ctx.moveTo(sx-ext,sy);ctx.bezierCurveTo(mx,sy,mx,ty,nx+ext,ty);ctx.stroke()}}
 ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
 const hk=$('hand').value;if(hk!=='n'&&it.length){const l=it[it.length-1];hand(l.x+l.w+ +$('hdx').value,l.y+ +$('hdy').value,hk==='m')}
@@ -286,9 +289,9 @@ $('snap').onclick=()=>{const v=$('vid');if(v.videoWidth)saveGlyph(cover(v,v.vide
 $('cclose').onclick=stopCam;$('pcam').onclick=startCam;
 $('cam').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const u=URL.createObjectURL(f),i=new Image();i.onload=()=>{saveGlyph(cover(i,i.naturalWidth,i.naturalHeight));URL.revokeObjectURL(u)};i.src=u};
 
-let lastSheet=null;
-function sheetRun(){const msg=$('allmsg'),chars=[...$('allch').value.replace(/\s/g,'')];if(!lastSheet)return;
-const iw=lastSheet.naturalWidth,ih=lastSheet.naturalHeight,k=Math.min(1,1400/Math.max(iw,ih)),w=Math.round(iw*k),h=Math.round(ih*k);
+let lastSheet=null,SH=null,shMode='del';
+const shChars=()=>[...$('allch').value.replace(/\s/g,'')];
+function shDetect(){const iw=lastSheet.naturalWidth,ih=lastSheet.naturalHeight,k=Math.min(1,1400/Math.max(iw,ih)),w=Math.round(iw*k),h=Math.round(ih*k);
 const sc=document.createElement('canvas');sc.width=w;sc.height=h;const sx=sc.getContext('2d',{willReadFrequently:true});sx.drawImage(lastSheet,0,0,w,h);
 const a=sx.getImageData(0,0,w,h).data,lum=new Float32Array(w*h);for(let i=0;i<w*h;i++)lum[i]=a[i*4]*.3+a[i*4+1]*.59+a[i*4+2]*.11;
 const I=new Float64Array((w+1)*(h+1));for(let y=0;y<h;y++){let r=0;for(let x=0;x<w;x++){r+=lum[y*w+x];I[(y+1)*(w+1)+x+1]=I[y*(w+1)+x+1]+r}}
@@ -300,8 +303,8 @@ const rowInk=new Int32Array(h);for(let y=0;y<h;y++)for(let x=0;x<w;x++)rowInk[y]
 const thr=Math.max(2,Math.round(w*.002));let bands=[],s=-1;
 for(let y=0;y<=h;y++){const on=y<h&&rowInk[y]>thr;if(on&&s<0)s=y;if(!on&&s>=0){bands.push([s,y-1]);s=-1}}
 const mg=Math.round(h*.012),mb=[];for(const b of bands){const l=mb[mb.length-1];if(l&&b[0]-l[1]<mg)l[1]=b[1];else mb.push([b[0],b[1]])}
-bands=mb.filter(b=>b[1]-b[0]>h*.015);const all=[];
-for(const[b0,b1]of bands){const bh=b1-b0+1,col=new Int32Array(w);for(let y=b0;y<=b1;y++)for(let x=0;x<w;x++)col[x]+=mask[y*w+x];
+bands=mb.filter(b=>b[1]-b[0]>h*.015);const all=[],bhs=bands.map(b=>b[1]-b[0]+1).sort((p,q)=>p-q),hmed=bhs.length?bhs[bhs.length>>1]:20;
+for(const[b0,b1]of bands){const bh=hmed,col=new Int32Array(w);for(let y=b0;y<=b1;y++)for(let x=0;x<w;x++)col[x]+=mask[y*w+x];
 const gap=Math.max(2,Math.round(bh*(+$('gap').value))),ss=[];let st=-1,last=-1;
 for(let x=0;x<w;x++){if(col[x]>0){if(st<0)st=x;last=x}else if(st>=0&&x-last>gap){ss.push([st,last]);st=-1}}if(st>=0)ss.push([st,last]);
 const it=[];for(const[x0,x1]of ss){let ink=0,top=1e9,bot=-1;for(let y=b0;y<=b1;y++)for(let x=x0;x<=x1;x++)if(mask[y*w+x]){ink++;if(y<top)top=y;if(y>bot)bot=y}
@@ -309,22 +312,34 @@ if(ink>bh*bh*.006&&x1-x0>=bh*.05)it.push({x0,x1,top,bot,b0,b1})}
 if(!it.length)continue;const bots=it.map(o=>o.bot).sort((p,q)=>p-q),tops=it.map(o=>o.top).sort((p,q)=>p-q),bl=bots[bots.length>>1],tp=tops[Math.floor(tops.length*.1)];
 for(const o of it){o.bl=bl;all.push(o)}}
 const hts=all.map(o=>Math.max(1,o.bl-o.top)).sort((p,q)=>p-q),HU=hts.length?hts[Math.min(hts.length-1,Math.floor(hts.length*.85))]:20;
-{const pc=$('sheetprev'),pk=Math.min(1,900/w);pc.width=Math.round(w*pk);pc.height=Math.round(h*pk);pc.style.display='block';const q=pc.getContext('2d');q.drawImage(sc,0,0,pc.width,pc.height);q.lineWidth=2;q.font='bold 13px system-ui';
-all.forEach((o,i)=>{const ok=all.length===chars.length;q.strokeStyle=ok?'#1a9b4a':'#e5322d';q.fillStyle=q.strokeStyle;q.strokeRect(o.x0*pk,o.top*pk,(o.x1-o.x0)*pk,(o.bot-o.top)*pk);q.fillText(ok?chars[i]:String(i+1),o.x0*pk,o.top*pk-3)})}
-if(all.length!==chars.length){msg.textContent='Нашлось букв: '+all.length+', а ожидалось '+chars.length+'. '+(all.length<chars.length?'Буквы слиплись: уменьшите «Разрыв между буквами» или пишите дальше друг от друга.':'Буквы разбились на части или есть лишние пятна: увеличьте «Разрыв между буквами» или снимите ровнее.');return}
+SH={sc,nrm,w,h,all,HU,forced:false}}
+function shDraw(){if(!SH)return;const{sc,w,h,all,forced}=SH,chars=shChars(),pc=$('sheetprev'),pk=Math.min(1,900/w),ok=all.length===chars.length||forced;pc.width=Math.round(w*pk);pc.height=Math.round(h*pk);pc.style.display='block';const q=pc.getContext('2d');q.drawImage(sc,0,0,pc.width,pc.height);q.lineWidth=2;q.font='bold 13px system-ui';
+all.forEach((o,i)=>{q.strokeStyle=ok?'#1a9b4a':'#e5322d';q.fillStyle=q.strokeStyle;q.strokeRect(o.x0*pk,o.top*pk,(o.x1-o.x0)*pk,(o.bot-o.top)*pk);q.fillText(ok&&i<chars.length?chars[i]:String(i+1),o.x0*pk,o.top*pk-3)})}
+function shApply(){if(!SH)return;const msg=$('allmsg'),chars=shChars(),{nrm,w,h,all,HU}=SH,cnt=Math.min(all.length,chars.length);
 const nc=document.createElement('canvas');nc.width=w;nc.height=h;const nx=nc.getContext('2d'),id=nx.createImageData(w,h);
 for(let i=0;i<w*h;i++){id.data[i*4]=id.data[i*4+1]=id.data[i*4+2]=nrm[i];id.data[i*4+3]=255}nx.putImageData(id,0,0);
-let n=0;all.forEach((o,i)=>{const H2=Math.max(10,HU)/.65,hh=Math.round(H2),cw=o.x1-o.x0+9,c=document.createElement('canvas');c.width=cw;c.height=hh;const cc=c.getContext('2d');cc.fillStyle='#fff';cc.fillRect(0,0,cw,hh);
+let n=0;all.slice(0,cnt).forEach((o,i)=>{const H2=Math.max(10,HU)/.65,hh=Math.round(H2),cw=o.x1-o.x0+9,c=document.createElement('canvas');c.width=cw;c.height=hh;const cc=c.getContext('2d');cc.fillStyle='#fff';cc.fillRect(0,0,cw,hh);
 const yt=Math.round(o.bl-.8*H2),ys0=Math.max(o.b0,yt),ys1=Math.min(o.b1+1,yt+hh),sx0=Math.max(0,o.x0-4),sx1=Math.min(w,o.x1+5);
 if(ys1>ys0&&sx1>sx0)cc.drawImage(nc,sx0,ys0,sx1-sx0,ys1-ys0,sx0-(o.x0-4),ys0-yt,sx1-sx0,ys1-ys0);
 const kk=400/hh,t=document.createElement('canvas');t.width=Math.max(1,Math.round(cw*kk));t.height=400;t.getContext('2d').drawImage(c,0,0,t.width,t.height);
 const g=mkGlyph(t);if(g){G.set(chars[i],g);n++}});
-tiles();sched();msg.textContent='Загружено букв: '+n+' из '+chars.length+'. Если какая-то вышла плохо, нажмите на её плитку и переснимите.'}
+tiles();sched();msg.textContent='Загружено: '+n+' из '+chars.length+'. Программа ничего не распознаёт: каждая рамка берётся как есть и сохраняется под своей по порядку буквой. Если что-то вышло не так, поправьте рамки или переснимите букву через плитку.'}
+function shAfter(){shDraw();const chars=shChars(),n=SH.all.length,msg=$('allmsg');$('shtools').style.display='block';
+if(n===chars.length){shApply();return}
+msg.textContent='Нашлось рамок: '+n+', а нужно '+chars.length+'. Красные рамки — то, что нашла программа. Нажмите «Убрать пятно» и коснитесь лишней рамки, или «Склеить с соседним» и коснитесь части буквы, чтобы объединить её с рамкой справа. Или нажмите «Применить по порядку»: программа возьмёт рамки как есть, не гадая, что на них нарисовано.'}
+function sheetRun(){if(!lastSheet)return;shDetect();shAfter()}
+$('shdel').onclick=()=>{shMode='del';$('shdel').classList.add('p');$('shmerge').classList.remove('p')};
+$('shmerge').onclick=()=>{shMode='merge';$('shmerge').classList.add('p');$('shdel').classList.remove('p')};
+$('shany').onclick=()=>{if(!SH)return;SH.forced=true;shDraw();shApply()};
+$('sheetprev').addEventListener('click',e=>{if(!SH)return;const pc=e.currentTarget,r=pc.getBoundingClientRect(),pk=pc.width/SH.w,x=(e.clientX-r.left)*pc.width/r.width/pk,y=(e.clientY-r.top)*pc.height/r.height/pk,al=SH.all;let idx=-1;
+for(let i=0;i<al.length;i++){const o=al[i];if(x>=o.x0-8&&x<=o.x1+8&&y>=o.top-8&&y<=o.bot+8){idx=i;break}}if(idx<0)return;
+if(shMode==='del')al.splice(idx,1);else{const o=al[idx],n=al[idx+1];if(!n||n.b0!==o.b0)return;o.x0=Math.min(o.x0,n.x0);o.x1=Math.max(o.x1,n.x1);o.top=Math.min(o.top,n.top);o.bot=Math.max(o.bot,n.bot);al.splice(idx+1,1)}
+SH.forced=false;shAfter()});
 $('allf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const u=URL.createObjectURL(f),i=new Image();i.onload=()=>{lastSheet=i;sheetRun();URL.revokeObjectURL(u)};i.src=u};
 $('gap').addEventListener('input',sheetRun);$('allch').addEventListener('change',sheetRun);
 const RUL='абвгдеёжзийклмнопрстуфхцчшщъыьэюя',ENL='abcdefghijklmnopqrstuvwxyz',DIG='0123456789',PUN='.,!?-:;()';
 function presetStr(){const k=$('pre').value,pn=$('ppun').checked&&!['dig','ruL','ruU','enL','enU'].includes(k)?PUN:'',U=t=>t.toUpperCase();
-const m={ru:DIG+U(RUL)+RUL,en:DIG+U(ENL)+ENL,both:DIG+U(RUL)+U(ENL)+RUL+ENL,ruL:RUL,ruU:U(RUL),enL:ENL,enU:U(ENL),dig:DIG};return m[k]+pn}
+const m={ru:U(RUL)+RUL+DIG,en:U(ENL)+ENL+DIG,both:U(RUL)+RUL+U(ENL)+ENL+DIG,ruL:RUL,ruU:U(RUL),enL:ENL,enU:U(ENL),dig:DIG};return m[k]+pn}
 function presetSet(){$('allch').value=presetStr();sheetRun()}
 $('pre').addEventListener('change',presetSet);$('ppun').addEventListener('change',presetSet);$('allch').value=presetStr();
 
@@ -347,18 +362,19 @@ for(let i=0;i<w*h;i++){if(!dm[i]||lab[i])continue;const id=comps.length+1;let x0
 while(st.length){const q=st.pop(),qx=q%w,qy=(q/w)|0;ar++;if(qx<x0)x0=qx;if(qx>x1)x1=qx;if(qy<y0)y0=qy;if(qy>y1)y1=qy;
 for(let dy=-1;dy<=1;dy++){const ny=qy+dy;if(ny<0||ny>=h)continue;for(let dx=-1;dx<=1;dx++){const nx=qx+dx;if(nx<0||nx>=w)continue;const r=ny*w+nx;if(dm[r]&&!lab[r]){lab[r]=id;st.push(r)}}}}
 comps.push({x0,x1,y0,y1,ar})}
-let pairs=0,joined=0;
+let pairs=0,joined=0;const WD=[];
 for(let li=0;li<lines.length;li++){const[b0,b1]=bands[li],bh=b1-b0+1,words=lines[li].split(/\s+/).filter(Boolean),
 cs=comps.filter(c=>{const cy=(c.y0+c.y1)/2;return cy>=b0-bh*.3&&cy<=b1+bh*.3&&c.ar>bh*bh*.004}).sort((p,q)=>p.x0-q.x0),cl=[];
 for(const c of cs){const l=cl[cl.length-1];if(l&&c.x0<=l.x1-.25*(c.x1-c.x0)){l.x1=Math.max(l.x1,c.x1)}else cl.push({x0:c.x0,x1:c.x1})}
 if(cl.length<words.length){jm.textContent='В строке '+(li+1)+' нашлось меньше слов, чем вы вписали. Проверьте текст и качество фото.';return}
 const gaps=[];for(let i=0;i<cl.length-1;i++)gaps.push([cl[i+1].x0-cl[i].x1,i]);
 const cuts=gaps.sort((p,q)=>q[0]-p[0]).slice(0,words.length-1).map(g=>g[1]).sort((p,q)=>p-q);let st0=0;
-for(let wi=0;wi<words.length;wi++){const end=wi<cuts.length?cuts[wi]:cl.length-1,cn=end-st0+1,n=(words[wi].match(/[\p{L}\p{N}]/gu)||[]).length;st0=end+1;
+for(let wi=0;wi<words.length;wi++){const end=wi<cuts.length?cuts[wi]:cl.length-1,cn=end-st0+1,n=(words[wi].match(/[\p{L}\p{N}]/gu)||[]).length;WD.push({li,t:words[wi],X0:cl[end-cn+1].x0,X1:cl[end].x1,b0,b1});st0=end+1;
 if(n>=2){pairs+=n-1;joined+=Math.max(0,Math.min(n-1,n-cn))}}}
+const PR=pairAnalysis(mask,w,h,WD);
 if(pairs<4){jm.textContent='Слишком мало текста для вывода. Напишите хотя бы 2–3 строки.';return}
-const rate=joined/pairs,pc=rate>.9?100:Math.round(rate*100);$('jf').value=pc;$('o_jf').textContent=pc;$('join').checked=pc>3;sched();
-jm.textContent='Готово: вы соединяете примерно '+pc+'% букв в словах. Это приблизительная оценка, ползунок «Доля соединённых букв» можно поправить. Если какая-то буква у вас никогда не соединяется, впишите её в «Не соединять после букв».'}
+const sm=[...PR.values()].reduce((a,v)=>a+v.m,0),sj=[...PR.values()].reduce((a,v)=>a+v.jn,0),rate=sm>=4?sj/sm:joined/pairs,pc=rate>.9?100:Math.round(rate*100);$('jf').value=pc;$('o_jf').textContent=pc;$('join').checked=pc>3;sched();
+mergeJM(PR);jm.textContent='Готово: вы соединяете примерно '+pc+'% букв. Разобрал пар букв: '+PR.size+'. Ниже показано, как соединяется каждая пара, и именно так программа будет соединять в вашем тексте. Если пара не попалась в образце, она соединяется по общей доле.'}
 $('jfile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;$('jmsg').textContent='Смотрю на почерк…';const u=URL.createObjectURL(f),i=new Image();i.onload=()=>{try{analyzeJoin(i)}catch(er){$('jmsg').textContent='Не удалось разобрать фото. Попробуйте снять ровнее.'}URL.revokeObjectURL(u)};i.src=u};
 
 function penSample(img){const pm=$('penmsg'),{w,h,mask}=inkMask(img),c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0,w,h);const a=x.getImageData(0,0,w,h).data;
@@ -372,6 +388,34 @@ PEN.lo=15;PEN.sp=Math.max(60,255-Lc-15);$('ink').value=hex;
 const spread=core.length>10?(core[core.length-1][3]-core[0][3]):0,op=Math.round(Math.min(100,Math.max(35,100-Math.max(0,spread-20)*.8)));$('jop').value=op;$('o_jop').textContent=op;sched();
 pm.innerHTML='Цвет чернил взят с образца: <span style="display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:middle;background:'+hex+'"></span> '+hex+', прозрачность '+op+'%. Буквы, которые вы загрузите после этого, будут повторять густоту штриха вашей ручки. Уже загруженные буквы лучше загрузить заново.'}
 $('penf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;$('penmsg').textContent='Смотрю на ручку…';const u=URL.createObjectURL(f),i=new Image();i.onload=()=>{try{penSample(i)}catch(er){$('penmsg').textContent='Не удалось разобрать фото. Попробуйте снять ровнее.'}URL.revokeObjectURL(u)};i.src=u};
+
+let JM={};try{JM=JSON.parse(localStorage.getItem('hwjm')||'{}')}catch(e){}
+function jmSave(){try{localStorage.setItem('hwjm',JSON.stringify(JM))}catch(e){}}
+function jmList(){const el=$('jlist');if(!el)return;const ks=Object.keys(JM).sort((p,q)=>JM[q].m-JM[p].m).slice(0,80);
+el.innerHTML=ks.length?ks.map(k=>{const v=JM[k];return '<span style="border:1px solid var(--line);border-radius:6px;padding:2px 6px;background:var(--bg)"><b>'+k+'</b> '+(v.j>=.5?'✓ '+Math.round(v.y*100)+'%':'—')+'</span>'}).join(''):'';}
+function mergeJM(PR){for(const[k,v]of PR){const o=JM[k]||{m:0,jn:0,sy:0};o.m+=v.m;o.jn+=v.jn;o.sy+=v.sy;o.j=o.jn/o.m;o.y=o.jn?o.sy/o.jn:0.3;JM[k]=o}jmSave();jmList();sched()}
+$('jreset').onclick=()=>{JM={};jmSave();jmList();$('jmsg').textContent='Образец сброшен.';sched()};
+function pairAnalysis(mask,w,h,WD){const PR=new Map(),pcs=(a,q)=>a.length?a[Math.min(a.length-1,Math.floor(a.length*q))]:0;
+const byLine=new Map();for(const d of WD){(byLine.get(d.li)||byLine.set(d.li,[]).get(d.li)).push(d)}
+for(const[li,ws]of byLine){const b0=ws[0].b0,b1=ws[0].b1,tops=[],bots=[];
+for(const d of ws){let t=1e9,bt=-1;for(let y=b0;y<=b1;y++)for(let x=d.X0;x<=d.X1;x++)if(mask[y*w+x]){if(y<t)t=y;if(y>bt)bt=y}d.top=t;d.bot=bt;if(bt>=0){tops.push(t);bots.push(bt)}}
+if(!bots.length)continue;bots.sort((p,q)=>p-q);const bl=bots[bots.length>>1],hs=ws.filter(d=>d.bot>=0).map(d=>bl-d.top).sort((p,q)=>p-q),Hu=Math.max(8,pcs(hs,.8));
+for(const d of ws){const let_=[...d.t].filter(c=>/[\p{L}\p{N}]/u.test(c)),n=let_.length;if(n<2||d.bot<0)continue;
+const X0=d.X0,X1=d.X1,span=X1-X0+1,prof=new Float32Array(span),runs=[];
+for(let x=0;x<span;x++){let c=0,run=0;for(let y=b0;y<=b1+1;y++){if(y<=b1&&mask[y*w+X0+x]){c++;run++}else{if(run)runs.push(run);run=0}}prof[x]=c}
+runs.sort((p,q)=>p-q);const tw=Math.max(2,pcs(runs,.5)),ps=new Float32Array(span);for(let x=0;x<span;x++)ps[x]=(prof[Math.max(0,x-1)]+prof[x]+prof[Math.min(span-1,x+1)])/3;
+const gw=let_.map(ch=>{const g=G.get(ch)||G.get(ch.toLowerCase());return g?g.w/g.h:.45}),tot=gw.reduce((a,b)=>a+b,0),sc=span/n,R=Math.max(4,Math.round(sc*.4)),minD=Math.max(3,Math.round(sc*.3));
+let cum=0;const pred=[];for(let i=0;i<n-1;i++){cum+=gw[i];pred.push(Math.round(span*cum/tot))}
+let prev=null;const cand=[];
+for(let i=0;i<n-1;i++){const lo=Math.max(1,pred[i]-R),hi=Math.min(span-2,pred[i]+R),cs=[];for(let x=lo;x<=hi;x++)cs.push({x,c:ps[x]/tw+Math.pow((x-pred[i])/R,2),b:-1,t:0});cand.push(cs)}
+for(let i=0;i<n-1;i++){const cs=cand[i];for(let k=0;k<cs.length;k++){if(i===0){cs[k].t=cs[k].c;continue}let best=1e9,bi=-1;const pv=cand[i-1];for(let m=0;m<pv.length;m++){if(cs[k].x-pv[m].x<minD)continue;if(pv[m].t<best){best=pv[m].t;bi=m}}cs[k].t=bi<0?1e9:best+cs[k].c;cs[k].b=bi}}
+let bk=-1,bv=1e9;const last=cand[n-2];if(!last||!last.length)continue;for(let k=0;k<last.length;k++)if(last[k].t<bv){bv=last[k].t;bk=k}if(bk<0||bv>=1e8)continue;
+const xs=new Array(n-1);for(let i=n-2,k=bk;i>=0;i--){xs[i]=cand[i][k].x;k=cand[i][k].b}
+for(let i=0;i<n-1;i++){const x=xs[i];let mx=x,mv=1e9;for(let q=x-1;q<=x+1;q++)if(q>=0&&q<span&&prof[q]<mv){mv=prof[q];mx=q}
+if(mv>3.5*tw)continue;const key=(let_[i]+let_[i+1]).toLowerCase(),v=PR.get(key)||{m:0,jn:0,sy:0};v.m++;
+if(mv>0){let sy=0,cn=0;for(let y=b0;y<=b1;y++)if(mask[y*w+X0+mx]){sy+=y;cn++}if(cn){v.jn++;v.sy+=Math.max(0,(bl-sy/cn)/Hu)}}PR.set(key,v)}}}
+return PR}
+jmList();
 let ready=false;
 function persist(){if(!ready)return;try{const o={};for(const[k,g]of G){g.u=g.u||g.c.toDataURL();o[k]={u:g.u,iy:g.iy,ey:g.ey,w:g.w,h:g.h}}localStorage.setItem('hw1',JSON.stringify(o))}catch(e){}}
 function restore(){let o={};try{o=JSON.parse(localStorage.getItem('hw1')||'{}')}catch(e){}let n=Object.keys(o).length;if(!n){ready=true;return}
