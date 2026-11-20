@@ -133,7 +133,7 @@ canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-
 <div class="prev"><div class="card">
 <div id="cvw" style="position:relative"><canvas id="cv"></canvas><svg id="lov" viewBox="0 0 794 1123" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none"></svg></div>
 <div class="nav"><button id="pv">←</button><span id="pg"></span><button id="nx">→</button></div>
-<div class="row"><button class="p" id="dl">Download page</button><button id="dla">All pages</button></div>
+<div class="row"><select id="dlf" style="padding:8px;border-radius:10px"><option value="png">PNG</option><option value="jpg">JPG</option><option value="pdf">PDF</option></select><button class="p" id="dl">Download page</button><button id="dla">All pages</button></div>
 <div id="sv"></div>
 </div></div>
 </div>
@@ -282,10 +282,21 @@ let FAST=false,fastT=0;function sched(){if(!X)return;FAST=true;clearTimeout(fast
 document.querySelectorAll('input,select,textarea').forEach(e=>e.addEventListener('input',()=>{const o=$('o_'+e.id);if(o)o.textContent=e.value;sched()}));
 $('pv').onclick=()=>{if(cur>0){cur--;render()}};$('nx').onclick=()=>{if(cur<NP-1){cur++;render()}};
 
-function blob(){return new Promise(r=>cv.toBlob(r,'image/png'))}
-async function save(i){draw(i);const b=await blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='page-'+(i+1)+'.png';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
-$('dl').onclick=async()=>{await save(cur);draw(cur)};
-$('dla').onclick=async()=>{for(let i=0;i<NP;i++)await save(i);draw(cur)};
+const fmt=()=>($('dlf')&&$('dlf').value)||'png';
+function blob(f){f=f||fmt();return new Promise(r=>cv.toBlob(r,f==='png'?'image/png':'image/jpeg',.95))}
+function getFile(b,name){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
+async function save(i){draw(i);const f=fmt()==='pdf'?'png':fmt(),b=await blob(f);getFile(b,'page-'+(i+1)+'.'+(f==='png'?'png':'jpg'))}
+async function makePdf(pages){const enc=new TextEncoder(),parts=[],offs=[];let len=0;const put=x=>{const u=typeof x==='string'?enc.encode(x):x;parts.push(u);len+=u.length};
+put('%PDF-1.4\n%\xe2\xe3\xcf\xd3\n');const n=pages.length,obj=(id,body)=>{offs[id]=len;put(id+' 0 obj\n');put(body);put('\nendobj\n')};
+obj(1,'<< /Type /Catalog /Pages 2 0 R >>');obj(2,'<< /Type /Pages /Kids ['+pages.map((_,i)=>(3+i*3)+' 0 R').join(' ')+'] /Count '+n+' >>');
+pages.forEach((p,i)=>{const pid=3+i*3,cid=pid+1,iid=pid+2;obj(pid,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 '+iid+' 0 R >> >> /Contents '+cid+' 0 R >>');
+const c='q 595.28 0 0 841.89 0 0 cm /Im0 Do Q';obj(cid,'<< /Length '+c.length+' >>\nstream\n'+c+'\nendstream');
+offs[iid]=len;put(iid+' 0 obj\n<< /Type /XObject /Subtype /Image /Width '+p.w+' /Height '+p.h+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+p.d.length+' >>\nstream\n');put(p.d);put('\nendstream\nendobj\n')});
+const tot=3+n*3,xr=len;put('xref\n0 '+tot+'\n0000000000 65535 f \n');for(let i=1;i<tot;i++)put(String(offs[i]).padStart(10,'0')+' 00000 n \n');put('trailer\n<< /Size '+tot+' /Root 1 0 R >>\nstartxref\n'+xr+'\n%%EOF');
+return new Blob(parts,{type:'application/pdf'})}
+async function savePdf(list){const pages=[];for(const i of list){draw(i);const b=await blob('jpg');pages.push({w:cv.width,h:cv.height,d:new Uint8Array(await b.arrayBuffer())})}getFile(await makePdf(pages),list.length>1?'pages.pdf':'page-'+(list[0]+1)+'.pdf')}
+$('dl').onclick=async()=>{if(fmt()==='pdf')await savePdf([cur]);else await save(cur);draw(cur)};
+$('dla').onclick=async()=>{if(fmt()==='pdf')await savePdf([...Array(NP).keys()]);else for(let i=0;i<NP;i++)await save(i);draw(cur)};
 function padInit(c,lw){const x=c.getContext('2d');x.lineCap=x.lineJoin='round';x.lineWidth=lw;x.strokeStyle='#000';x.fillStyle='#000';let d=false,p=null,m=null;
 const pt=e=>{const r=c.getBoundingClientRect();return[(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height]};
 c.onpointerdown=e=>{e.preventDefault();try{c.setPointerCapture(e.pointerId)}catch(_){}d=true;p=pt(e);m=p;x.beginPath();x.arc(p[0],p[1],lw/2,0,7);x.fill()};
@@ -558,7 +569,7 @@ else{cur={text:t,conf:l.conf,x0:l.x0,x1:l.x1,y0:l.y0,y1:l.y1,first:l,last:l,bul:
 prevFull=full(l)&&l.text.length>12}
 const pp=(()=>{const g=[];for(let i=1;i<ok.length;i++){const d=((ok[i].y0+ok[i].y1)-(ok[i-1].y0+ok[i-1].y1))/2;if(d>6)g.push(d)}g.sort((a,b)=>a-b);return g.length?g[Math.floor(g.length*.4)]:40})();
 let yy=0,out2=[],pv=null;for(const q of pars){const isP=q.text.length>25;let step=1;if(pv){const gap=((q.first.y0+q.first.y1)-(pv.last.y0+pv.last.y1))/2;step=Math.max(1,Math.round(gap/pp+.1))}yy+=step*pp;const h=Math.max(q.first.y1-q.first.y0,8);
-q.y0=yy-h/2;q.y1=yy+h/2;q.text=q.text.replace(/(?<=[a-z,]) 15(?= [a-z])/g,' is').replace(/(?<=[a-z]) 1(?=[fnts] )/g,' i').replace(/(?<=^|[ ])1([fnts])(?= )/g,'i$1').replace(/\bwh1ch\b/g,'which').replace(/(?<=\w) ?@ ?(?=\w)/g,'@').replace(/ +([.,;:!?])/g,'$1').replace(/^["'\s]+(?=[A-Z])/,'');if(q.bul)q.text='- '+q.text;q.x1=isP?R:q.x1;q.x0=bx0;if(!isP){q.par=false}out2.push(q);pv=q}
+q.y0=yy-h/2;q.y1=yy+h/2;q.text=q.text.replace(/(?<=[a-z,]) 15(?= [a-z])/g,' is').replace(/(?<=[a-z]) 1(?=[fnts] )/g,' i').replace(/(?<=^|[ ])1([fnts])(?= )/g,'i$1').replace(/\bwh1ch\b/g,'which').replace(/(?<=\w) ?@ ?(?=\w)/g,'@').replace(/ +([.,;:!?])/g,'$1').replace(/^["'\s]+(?=[A-Z])/,'');q.x1=isP?R:q.x1;q.x0=bx0;if(!isP){q.par=false}out2.push(q);pv=q}
 lines=out2}}}
 {const rls=PM?[]:findRules(cv);if(rls.length&&rls.length<=4){const tx0=Math.min(...lines.map(l=>l.x0));for(const r of rls){const id=NFR++,g=ruleGlyph(id);g.ch=String.fromCharCode(0xF900+id);FIGS.push(g);FRAMES[id]={kind:'fig',hn:1,ar:40,dxn:0,dy:.4};lines.push({text:'',conf:100,x0:Math.max(tx0,Math.min(r.x0,tx0+1)),x1:r.x1,y0:r.y-1,y1:r.y+1,rule:id})}}}
 const rlh={};for(const l of lines)if(inRing.has(l)){const mm=fixMath2(fixMath(l.text)).match(/^([A-Za-z])\s*=/);if(mm)rlh[mm[1]]=(rlh[mm[1]]||0)+1}const RLHS=Object.keys(rlh).sort((a,b)=>rlh[b]-rlh[a])[0];
@@ -570,9 +581,27 @@ for(const p of pieces){const cy=(p.l.y0+p.l.y1)/2,h=p.l.y1-p.l.y0;if(g&&Math.abs
 const ys=lines.map(l=>(l.y0+l.y1)/2).sort((a,b)=>a-b),dd=[];for(let i=1;i<ys.length;i++)if(ys[i]-ys[i-1]>8)dd.push(ys[i]-ys[i-1]);dd.sort((a,b)=>a-b);const pp=dd.length?dd[Math.floor(dd.length*.25)]:H/30,minX=Math.min(...lines.map(l=>l.x0));
 figs.forEach(f=>{const n=Math.max(1,Math.round((f.y1-f.y0)/pp)),id=NFR,r=ringGlyph(m,W,f,[],id,n*34,lines);if(!r)return;Object.assign(r.fr,{kind:'fig',hn:n,ar:(r.g.w-16)/(r.g.h-16),dxn:Math.max(0,(f.x0-minX)/pp)});FIGS.push(r.g);FRAMES[id]=r.fr;NFR++;items.push({y:f.y0,t:String.fromCharCode(0xEA00+id)+('\n'+String.fromCharCode(0xE1FF)).repeat(n-1)})});
 items.sort((a,b)=>a.y-b.y);const text=items.map(i=>i.t).join('\n').replace(/\n{3,}/g,'\n\n');return{text,lines:lines.length,figs:figs.length}}
-(function(){const row=document.createElement('div');row.style.cssText='margin:8px 0';row.innerHTML='<label class="btn" style="display:inline-block;cursor:pointer;padding:10px 14px;border-radius:12px;background:#2f6f4f;color:#fff;font-weight:600">📷 Photo of a sheet → in my handwriting<input id="scanIn" type="file" accept="image/*" capture="environment" style="display:none"></label><label class="btn" style="display:inline-block;cursor:pointer;padding:10px 14px;border-radius:12px;background:#3f5f8f;color:#fff;font-weight:600;margin-left:8px">🖼 From gallery / files<input id="scanIn2" type="file" accept="image/*,application/pdf,.pdf" style="display:none"></label><div style="margin-top:6px;font-size:13px">Sheet language: <select id="scanLang"><option value="eng">English</option><option value="rus">Russian</option><option value="eng+rus">English + Russian</option></select> <label style="margin-left:10px">PDF page: <input id="scanPg" type="number" min="1" value="1" style="width:50px"></label> <label style="margin-left:10px"><input type="checkbox" id="scanFig" checked> redraw diagrams and graphs</label></div><span id="scanSt" class="hint" style="margin-left:10px"></span>';const t=$('txt');t.parentNode.insertBefore(row,t);
+(function(){const row=document.createElement('div');row.style.cssText='margin:8px 0';row.innerHTML='<label class="btn" style="display:inline-block;cursor:pointer;padding:10px 14px;border-radius:12px;background:#2f6f4f;color:#fff;font-weight:600">📷 Photo of a sheet → in my handwriting<input id="scanIn" type="file" accept="image/*" capture="environment" style="display:none"></label><label class="btn" style="display:inline-block;cursor:pointer;padding:10px 14px;border-radius:12px;background:#3f5f8f;color:#fff;font-weight:600;margin-left:8px">🖼 From gallery / files<input id="scanIn2" type="file" accept="image/*,application/pdf,.pdf" style="display:none"></label><label class="btn" style="display:inline-block;cursor:pointer;padding:10px 14px;border-radius:12px;background:#8a4f2f;color:#fff;font-weight:600;margin-left:8px;margin-top:6px">📄 PDF / Word document → handwriting<input id="docIn" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none"></label><div style="margin-top:6px;font-size:13px">Sheet language: <select id="scanLang"><option value="eng">English</option><option value="rus">Russian</option><option value="eng+rus">English + Russian</option></select> <label style="margin-left:10px">PDF page: <input id="scanPg" type="number" min="1" value="1" style="width:50px"></label> <label style="margin-left:10px"><input type="checkbox" id="scanFig" checked> redraw diagrams and graphs</label></div><span id="scanSt" class="hint" style="margin-left:10px"></span>';const t=$('txt');t.parentNode.insertBefore(row,t);
 $('scanIn').onchange=async e=>{let f=e.target.files[0];if(!f)return;const st=s=>$('scanSt').textContent=s;try{if(f.type==='application/pdf'||/\.pdf$/i.test(f.name))f=await pdfPage(f,st);const r=await scanSheet(f,st);$('txt').value=r.text;st('Done: lines '+r.lines+', diagrams '+r.figs);genFigs();sched()}catch(err){st('Error: '+err.message)}e.target.value=''};$('scanIn2').onchange=$('scanIn').onchange})();
 
+
+// ===== PDF / Word document -> text =====
+async function docxText(file){const buf=new Uint8Array(await file.arrayBuffer()),dv=new DataView(buf.buffer);let e=-1;for(let i=buf.length-22;i>=Math.max(0,buf.length-66000);i--)if(dv.getUint32(i,true)===0x06054b50){e=i;break}if(e<0)throw new Error('This is not a .docx file (old .doc is not supported — save it as .docx or PDF)');
+const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);for(let k=0;k<n;k++){const meth=dv.getUint16(p+10,true),csz=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true),name=new TextDecoder().decode(buf.subarray(p+46,p+46+nl));
+if(name==='word/document.xml'){const ln=dv.getUint16(lo+26,true),le=dv.getUint16(lo+28,true),d=buf.subarray(lo+30+ln+le,lo+30+ln+le+csz);let xml;if(meth===0)xml=new TextDecoder().decode(d);else{const ds=new DecompressionStream('deflate-raw'),w=ds.writable.getWriter();w.write(d);w.close();xml=await new Response(ds.readable).text()}
+const paras=xml.split(/<\/w:p>/).map(pp=>{let t='';const re=/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:tab\/>|<w:br\/>/g;let m;while((m=re.exec(pp))){if(m[0]==='<w:tab/>')t+=String.fromCharCode(0xE20B);else if(m[0]==='<w:br/>')t+='\n';else t+=m[1]}return t.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&')});
+return paras.join('\n').replace(/\n{3,}/g,'\n\n').trim()}p+=46+nl+el+cl}throw new Error('Text not found in the Word file')}
+async function pdfTextAll(file,st){st('Opening PDF…');await loadPdfJs();const doc=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;const all=[];
+for(let n=1;n<=doc.numPages;n++){st('Reading PDF page '+n+' of '+doc.numPages+'…');const pg=await doc.getPage(n),tc=await pg.getTextContent(),rows=[];
+for(const it of tc.items){if(!it.str||!it.str.trim()&&!it.hasEOL)continue;const y=it.transform[5],x=it.transform[4],h=Math.abs(it.transform[3])||10;let r=rows.find(r=>Math.abs(r.y-y)<h*.4);if(!r){r={y,h,its:[]};rows.push(r)}r.its.push({x,w:it.width||0,s:it.str})}
+rows.sort((a,b)=>b.y-a.y);const lines=rows.map(r=>{r.its.sort((a,b)=>a.x-b.x);let t='',px=null;for(const i of r.its){if(px!==null&&i.x-px>r.h*.15&&!/\s$/.test(t)&&!/^\s/.test(i.s))t+=' ';t+=i.s;px=i.x+i.w}return{y:r.y,h:r.h,t:t.replace(/\s+/g,' ').trim(),x:r.its[0].x}}).filter(l=>l.t);
+const gaps=[];for(let i=1;i<lines.length;i++)gaps.push(lines[i-1].y-lines[i].y);gaps.sort((a,b)=>a-b);const mg=gaps.length?gaps[Math.floor(gaps.length*.3)]:14;const minx=lines.length?Math.min(...lines.map(l=>l.x)):0,maxlen=lines.length?Math.max(...lines.map(l=>l.t.length)):0;
+let out='';lines.forEach((l,i)=>{if(i===0){out=l.t;return}const gap=lines[i-1].y-l.y,prev=lines[i-1];const newPar=gap>mg*1.45||l.x>minx+l.h*1.2||/[.!?:]$/.test(prev.t)&&prev.t.length<maxlen*.6||l.t.length<maxlen*.5&&gap>mg*1.2;
+if(newPar)out+='\n'+(gap>mg*1.9?String.fromCharCode(0xE1FF)+'\n':'')+l.t;else if(/[A-Za-z]-$/.test(prev.t)&&/^[a-z]/.test(l.t)){const lw=prev.t.split(' ').pop();out=out.slice(0,/-.+-$/.test(lw)?out.length:-1)+l.t}else out+=' '+l.t});
+all.push(out)}
+return all.join('\n').trim()}
+$('docIn').onchange=async e=>{const f=e.target.files[0];if(!f)return;const st=s=>$('scanSt').textContent=s;try{let t;if(/\.docx$/i.test(f.name))t=await docxText(f);else if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)){t=await pdfTextAll(f,st);if(t.replace(/\s/g,'').length<20)throw new Error('This PDF has no text layer (it is a scan). Use "From gallery / files" to read it as a picture.')}else throw new Error('Choose a PDF or .docx file');
+$('txt').value=t;st('Done: '+t.replace(/\s/g,'').length+' characters loaded');sched()}catch(err){st('Error: '+err.message)}e.target.value=''};
 (function(){const L=()=>$('txt').value.replace(/\r/g,'').split('\n'),SP=0xE20A;
 const clean=t=>t.replace(/[-]/g,'').trim();
 const ind=t=>{let n=0;while(n<t.length&&t.charCodeAt(n)>=0xE200&&t.charCodeAt(n)<0xE300)n++;return n};
