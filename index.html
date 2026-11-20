@@ -85,8 +85,8 @@ canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-
 <div class="row"><span id="losel" class="hint">Nothing selected</span></div>
 <div class="row"><button type="button" id="lom">Smaller</button><button type="button" id="lop">Bigger</button><button type="button" id="lor">Reset line</button><button type="button" id="loa">Reset all</button></div>
 <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="lowv"> Wave</label>
-<label>Wave height<output id="o_lowa">30</output><input type="range" id="lowa" min="5" max="150" value="30"></label>
-<label>Wave length (letters)<output id="o_lowl">9</output><input type="range" id="lowl" min="3" max="40" value="9"></label>
+<label>Wave height<output id="o_lowa">70</output><input type="range" id="lowa" min="10" max="300" value="70"></label>
+<label>Wave length (letters)<output id="o_lowl">14</output><input type="range" id="lowl" min="4" max="60" value="14"></label>
 <div class="row"><button class="p" type="button" id="lodone">Done</button></div></div>
 <div id="lnlist"></div><div class="row"><button type="button" id="lnadd">＋ Add line at the end</button></div></div></section>
 <section class="pn" id="t2" hidden><div class="card"><h1>All letters in one photo</h1>
@@ -601,7 +601,7 @@ for(const o of r.its){const u=Math.min(1,Math.max(0,(o.x+o.w/2-r.x0)/bw)),v=(o.y
 const Px=(1-u)*(1-v)*TL[0]+u*(1-v)*TR[0]+u*v*BR[0]+(1-u)*v*BL[0],Py=(1-u)*(1-v)*TL[1]+u*(1-v)*TR[1]+u*v*BR[1]+(1-u)*v*BL[1];
 const du=[(1-v)*(TR[0]-TL[0])+v*(BR[0]-BL[0]),(1-v)*(TR[1]-TL[1])+v*(BR[1]-BL[1])],dv=[(1-u)*(BL[0]-TL[0])+u*(BR[0]-TR[0]),(1-u)*(BL[1]-TL[1])+u*(BR[1]-TR[1])];
 const sx=Math.hypot(du[0],du[1])/bw,sy=Math.hypot(dv[0],dv[1])/bh;let rot=Math.atan2(du[1],du[0]),py=Py;
-if(wv&&wv.on){const A=wv.a/100*bh*.8,L=Math.max(3,wv.l)*aw,t=(o.x+o.w/2-r.x0)*sx,ph=2*Math.PI*t/L;py+=A*Math.sin(ph);rot+=Math.atan(A*2*Math.PI/L*Math.cos(ph))}
+if(wv&&wv.on){const A=wv.a/100*bh*1.5,L=Math.max(2,wv.l)*aw,t=(o.x+o.w/2-r.x0)*sx,ph=2*Math.PI*t/L;py+=A*Math.sin(ph);rot+=.45*Math.atan(A*2*Math.PI/L*Math.cos(ph))}
 rot=Math.max(-1.2,Math.min(1.2,rot+o.rot));
 X.item_set(o.i,Px-o.w*sx/2,py,o.w*sx,o.h*sy,rot,o.dy*sy)}}
 const svgN=(t,a)=>{const e=document.createElementNS('http://www.w3.org/2000/svg',t);for(const k in a)e.setAttribute(k,a[k]);return e};
@@ -609,7 +609,7 @@ function LOdraw(){const sv=$('lov');sv.innerHTML='';if(!LOON){sv.style.pointerEv
 const k=W/cv.clientWidth,rr=8*k,pgR=LROWS.filter(r=>r.pg===cur);
 for(const r of pgR){const Q=LOquad(r),sel=LOSEL===r.key;const pl=svgN('polygon',{points:Q.map(p=>p.join(',')).join(' '),fill:sel?'rgba(40,110,230,.10)':'rgba(40,110,230,.04)',stroke:sel?'#2a6ee6':'rgba(40,110,230,.45)','stroke-width':(sel?2:1)*k,'stroke-dasharray':sel?'':(5*k)+' '+(4*k)});pl.dataset.k=r.key;pl.style.cursor='move';sv.appendChild(pl)}
 const s=LROWS.find(r=>r.key===LOSEL&&r.pg===cur);if(s){LOquad(s).forEach((p,i)=>{const c=svgN('circle',{cx:p[0],cy:p[1],r:rr,fill:'#fff',stroke:'#2a6ee6','stroke-width':2.5*k});c.dataset.c=i;c.style.cursor='nwse-resize';sv.appendChild(c);const h=svgN('circle',{cx:p[0],cy:p[1],r:20*k,fill:'rgba(0,0,0,0.001)'});h.dataset.c=i;sv.appendChild(h)})}
-$('losel').textContent=s?('Selected: '+(s.kind==='fig'?'oval / shape':'line')+' · drag the body to move, corners to stretch'):'Nothing selected — tap a line';
+['lowv','lowa','lowl','lom','lop','lor'].forEach(id=>$(id).disabled=!s);$('losel').textContent=s?('Selected: '+(s.kind==='fig'?'oval / shape':'line')+' · drag the body to move, corners to stretch'):'First tap a line or oval on the sheet — then Wave and the other buttons work';
 const ov=s&&LNO[s.key];$('lowv').checked=!!(ov&&ov.wv&&ov.wv.on);if(ov&&ov.wv){$('lowa').value=ov.wv.a;$('lowl').value=ov.wv.l;$('o_lowa').textContent=ov.wv.a;$('o_lowl').textContent=ov.wv.l}}
 const LOpt=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H]};
 let LOdrag=null;
